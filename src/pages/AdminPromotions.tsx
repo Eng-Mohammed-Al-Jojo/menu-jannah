@@ -221,9 +221,9 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
     if (form.description.trim()) {
       payload.description = form.description.trim();
     }
-    if (form.image.trim()) {
-      payload.image = form.image.trim();
-    }
+    // أرسل الحقل دائماً حتى يؤدي حذف الصورة من النموذج إلى حذفها من Firebase
+    // بدلاً من ترك القيمة القديمة محفوظة.
+    payload.image = form.image.trim();
 
     await onSave(payload as Omit<Promotion, 'id'>);
   };
