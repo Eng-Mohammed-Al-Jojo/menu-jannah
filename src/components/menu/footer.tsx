@@ -8,7 +8,7 @@ import {
   FaTelegramPlane,
   FaTiktok,
 } from "react-icons/fa";
-import { FiCreditCard, FiClock } from "react-icons/fi";
+import { FiCreditCard, FiClock, FiExternalLink } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../../firebase";
@@ -147,11 +147,13 @@ export default function Footer() {
 
         {/* Contact info */}
         {(footer.address || footer.phone) && (
-          <div className="flex flex-wrap justify-center items-center gap-3 text-xs text-neutral-400">
+          <div className="flex flex-wrap justify-center items-center gap-2.5 text-xs text-neutral-400">
             {footer.address && (
-              <div className="flex items-center gap-1.5">
-                <FaMapMarkerAlt className="text-amber-500 shrink-0" size={12} />
-                <span>{footer.address}</span>
+              <div className="flex items-center gap-2 rounded-xl border border-amber-500/15 bg-white/[0.045] px-3 py-2 text-right">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">
+                  <FaMapMarkerAlt size={12} />
+                </span>
+                <span className="font-semibold text-neutral-300">{footer.address}</span>
               </div>
             )}
             {footer.phone && (
@@ -234,20 +236,24 @@ export default function Footer() {
         )}
 
         {/* Signature */}
-        <div className="pt-5 border-t border-amber-500/20 w-full flex flex-col items-center gap-2">
+        <div className="pt-4 border-t border-amber-500/12 w-full flex flex-col items-center gap-2">
           <a
             href="https://engmohammedaljojo.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="زيارة موقع المهندس محمد الجوجو"
-            className="group flex w-full max-w-xs flex-col items-center gap-2 rounded-2xl border border-amber-500/30 bg-white/5 px-5 py-3 shadow-[0_8px_24px_rgba(0,0,0,.16)] transition-all hover:border-amber-400/60 hover:bg-amber-500/10 hover:-translate-y-0.5"
+            className="group flex w-full max-w-[260px] flex-col items-center gap-1.5 rounded-xl border border-amber-500/18 bg-white/[0.035] px-4 py-2.5 transition-all hover:border-amber-400/50 hover:bg-amber-500/10"
           >
-            <div className="flex items-center gap-2 text-[11px] font-bold text-amber-300">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-300/85">
               <FaLaptopCode size={12} />
               <span>تطوير وتصميم</span>
             </div>
-            <span className="text-sm font-black tracking-wide text-amber-300 group-hover:text-amber-200 transition-colors">
+            <span className="text-[13px] font-black tracking-wide text-amber-300 group-hover:text-amber-200 transition-colors">
               Eng. Mohammed El joujo
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/12 px-2.5 py-1 text-[10px] font-bold text-amber-200/90 transition-colors group-hover:bg-amber-500/20">
+              <FiExternalLink size={11} />
+              زيارة الموقع
             </span>
           </a>
           <p className="text-[10px] text-neutral-500 mt-1">

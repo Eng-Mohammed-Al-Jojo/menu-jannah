@@ -43,7 +43,7 @@ export default function FeaturedStrip({ items, orderSystem, onItemClick, onDetai
               viewport={{ once: true }}
               transition={{ delay: index * 0.05 }}
               onClick={() => !unavailable && (orderSystem ? onItemClick?.(item) : onDetailsClick?.(item))}
-              className={`relative snap-start shrink-0 w-[78vw] sm:w-[280px] h-64 sm:h-72 overflow-hidden rounded-[24px] bg-snouno-dark text-white shadow-[0_14px_35px_rgba(11,59,45,.18)] ${unavailable ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+              className={`relative snap-start shrink-0 w-[78vw] sm:w-[280px] h-64 sm:h-72 overflow-hidden rounded-[24px] bg-snouno-dark text-white shadow-none ${unavailable ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             >
               <div className="absolute inset-0 overflow-hidden">
                 <img

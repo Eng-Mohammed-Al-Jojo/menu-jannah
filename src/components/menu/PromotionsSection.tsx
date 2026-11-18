@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiClock, FiTag, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiClock, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { PromotionService } from '../../services/promotionService';
 import {
   type Promotion,
@@ -61,9 +61,11 @@ function PromotionCard({ promotion, item }: { promotion: Promotion; item: any })
             onError={e => { e.currentTarget.src = '/logo.png'; }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-amber-50">
-            <FiTag size={32} className="text-amber-300" />
-          </div>
+          <img
+            src="/jannah-logo.jpg"
+            alt="شعار مطعم جنة"
+            className="w-full h-full object-cover"
+          />
         )}
       </div>
 
