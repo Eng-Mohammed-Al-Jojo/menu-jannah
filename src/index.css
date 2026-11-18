@@ -1,0 +1,382 @@
+@import "tailwindcss";
+
+/* ==========================================================
+   FONT FACES — IBM Plex Sans Arabic
+   ========================================================== */
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  src: url('/fonts/IBMPlexSansArabic-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================
+   TAILWIND V4 THEME — Jannah Visual Identity System
+   Primary:  #0B3B2D  (Royal Deep Green)
+   Accent:   #BC9D6B  (Toasted Gold)
+   Canvas:   #EFE6C9  (Cream Beige)
+   Surface:  #F8F4E8  (Soft Light Beige)
+   ========================================================== */
+
+@theme {
+  /* Brand Amber Scale */
+  --color-amber-50: #fefce8;
+  --color-amber-100: #fef9c3;
+  --color-amber-200: #fef08a;
+  --color-amber-300: #fde047;
+  --color-amber-400: #facc15;
+  --color-amber-500: #BC9D6B;
+  --color-amber-600: #9E8052;
+  --color-amber-700: #80643D;
+  --color-amber-800: #604B2E;
+  --color-amber-900: #463722;
+
+  /* Brand Colors */
+  --color-snouno-amber: #BC9D6B;
+  --color-snouno-dark: #0B3B2D;
+  --color-snouno-cream: #EFE6C9;
+  --color-snouno-beige: #F8F4E8;
+  --color-snouno-card: #F8F4E8;
+
+  /* Legacy Mappings for Compatibility */
+  --color-primary-500: #0B3B2D;
+  --color-primary: #0B3B2D;
+  --color-gold-300: #D8C085;
+  --color-gold: #BC9D6B;
+  --color-secondary-500: #185442;
+  --color-secondary: #185442;
+
+  /* Unified Shadows */
+  --shadow-snouno-card: 0 10px 30px rgba(18, 19, 22, 0.04);
+  --shadow-snouno-floating: 0 16px 40px rgba(245, 158, 11, 0.16);
+  --shadow-snouno-glow: 0 0 35px rgba(245, 158, 11, 0.28);
+}
+
+/* ==========================================================
+   ROOT DESIGN TOKENS — Complete & Unified
+   ========================================================== */
+:root {
+  /* ── Brand Amber ── */
+  --brand-amber: #BC9D6B;
+  --brand-amber-hover: #9E8052;
+  --brand-amber-deep: #80643D;
+  --brand-amber-light: rgba(188, 157, 107, 0.10);
+  --brand-amber-glow: rgba(188, 157, 107, 0.25);
+
+  /* ── Brand Dark ── */
+  --brand-obsidian: #0B3B2D;
+  --brand-obsidian-light: #185442;
+  --brand-obsidian-2: #123F32;
+
+  /* ── Brand Surfaces ── */
+  --brand-cream: #EFE6C9;
+  --brand-surface: #F8F4E8;
+  --brand-beige: #D8C085;
+
+  /* ── Legacy Aliases (used in older components) ── */
+  --brand-red: #BC9D6B;
+  --brand-red-dark: #9E8052;
+  --brand-red-deep: #80643D;
+  --brand-gold: #BC9D6B;
+  --brand-gold-deep: #9E8052;
+  --brand-dark: #0B3B2D;
+
+  /* ── Backgrounds & Surfaces ── */
+  --bg-main: #EFE6C9;
+  --bg-surface: #F8F4E8;
+  --bg-card: #F8F4E8;
+  --bg-hero: #0B3B2D;
+
+  /* ── Text Colors ── */
+  --text-primary: #1E2421;
+  --text-secondary: #185442;
+  --text-muted: #6E6A5F;
+  --text-on-amber: #FFFFFF;
+
+  /* ── Aliases used in components ── */
+  --text-main: #121316;
+
+  /* ── Borders ── */
+  --border-light: rgba(245, 158, 11, 0.10);
+  --border-base: rgba(245, 158, 11, 0.18);
+  --border-strong: rgba(245, 158, 11, 0.35);
+  --border-color: rgba(245, 158, 11, 0.15);
+
+  /* ── Border Radius ── */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-hero: 36px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 10px 30px rgba(18, 19, 22, 0.04);
+  --shadow-floating: 0 16px 40px rgba(245, 158, 11, 0.16);
+  --shadow-button: 0 8px 24px rgba(245, 158, 11, 0.28);
+  --shadow-gold: 0 8px 24px rgba(245, 158, 11, 0.20);
+  --shadow-glow: 0 0 35px rgba(245, 158, 11, 0.28);
+  --shadow-premium: 0 20px 60px rgba(18, 19, 22, 0.10);
+  --shadow-soft: 0 4px 16px rgba(18, 19, 22, 0.06);
+
+  /* ── Alpha Overlays — Dark (Obsidian) ── */
+  --dark-a08: rgba(18, 19, 22, 0.08);
+  --dark-a12: rgba(18, 19, 22, 0.12);
+  --dark-a18: rgba(18, 19, 22, 0.18);
+  --dark-a25: rgba(18, 19, 22, 0.25);
+  --dark-a40: rgba(18, 19, 22, 0.40);
+  --dark-a55: rgba(18, 19, 22, 0.55);
+  --dark-a65: rgba(18, 19, 22, 0.65);
+  --dark-a80: rgba(18, 19, 22, 0.80);
+
+  /* ── Alpha Overlays — Amber ── */
+  --amber-a05: rgba(245, 158, 11, 0.05);
+  --amber-a08: rgba(245, 158, 11, 0.08);
+  --amber-a12: rgba(245, 158, 11, 0.12);
+  --amber-a18: rgba(245, 158, 11, 0.18);
+  --amber-a25: rgba(245, 158, 11, 0.25);
+  --amber-a35: rgba(245, 158, 11, 0.35);
+
+  /* ── Legacy Red Aliases (map to amber) ── */
+  --red-a08: rgba(245, 158, 11, 0.08);
+  --red-a12: rgba(245, 158, 11, 0.12);
+  --red-a18: rgba(245, 158, 11, 0.18);
+  --red-a25: rgba(245, 158, 11, 0.25);
+
+  /* ── Display Yellow (search bar) ── */
+  --display-yellow-pale: rgba(245, 158, 11, 0.07);
+  --display-yellow-border: rgba(245, 158, 11, 0.25);
+
+  /* ── Transitions ── */
+  --transition: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================
+   BASE STYLES
+   ========================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+
+.menu-wrapper {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+
+/* ==========================================================
+   GLASS UTILITIES
+   ========================================================== */
+.glass {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+}
+
+.glass-dark {
+  background: rgba(18, 19, 22, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(245, 158, 11, 0.20);
+}
+
+.glass-amber {
+  background: rgba(245, 158, 11, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* ==========================================================
+   SCROLLBAR UTILITIES
+   ========================================================== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-full);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.45);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ==========================================================
+   SKELETON SHIMMER
+   ========================================================== */
+@keyframes shimmer {
+  0% { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--brand-beige) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================
+   ANIMATIONS & KEYFRAMES
+   ========================================================== */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeSlideUp {
+  animation: fadeSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes brandBreathing {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.35));
+  }
+  50% {
+    transform: scale(1.035);
+    filter: drop-shadow(0 0 40px rgba(245, 158, 11, 0.55));
+  }
+}
+
+.animate-brandBreathing {
+  animation: brandBreathing 4.5s ease-in-out infinite;
+}
+
+@keyframes amberGlowPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.08);
+  }
+}
+
+.animate-amberGlowPulse {
+  animation: amberGlowPulse 5s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================
+   WATERMARK PATTERNS
+   ========================================================== */
+.hero-watermark {
+  background-image: url('/jannah-pattern.jpg');
+  background-size: 420px;
+  background-repeat: repeat;
+  opacity: 0.06;
+}
+
+.loading-watermark {
+  background-image: url('/jannah-pattern.jpg');
+  background-size: 360px;
+  background-repeat: repeat;
+  opacity: 0.05;
+  filter: sepia(0.2) brightness(1.4);
+}

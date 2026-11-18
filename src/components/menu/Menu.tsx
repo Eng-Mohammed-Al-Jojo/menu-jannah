@@ -1,0 +1,515 @@
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import CategorySection from "./CategorySection";
+import ItemRow from "./ItemRow";
+import MenuSkeleton from "./MenuSkeleton";
+import { AnimatePresence, motion } from "framer-motion";
+import { FiSearch, FiX } from "react-icons/fi";
+import { FaCommentDots } from "react-icons/fa";
+import FeedbackModal from "./FeedbackModal";
+import CategoryNavigation from "./CategoryNavigation";
+
+import { MenuService } from "../../services/menuService";
+
+const containerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } }
+};
+
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0, scale: 0.98 }
+};
+
+const categoryVariants = {
+  initial: { opacity: 0, x: 10 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -10 }
+};
+
+/* ================= Types ================= */
+export interface Category {
+  id: string;
+  name: string;
+  nameAr?: string;
+  nameEn?: string;
+  available?: boolean;
+  order?: number;
+  image?: string;
+  visible?: boolean;
+}
+
+export interface Subcategory {
+  id: string;
+  nameAr: string;
+  nameEn?: string;
+  categoryId: string;
+  image?: string;
+  visible?: boolean;
+  order?: number;
+}
+
+export interface Item {
+  featured: any;
+  image: string | undefined;
+  id: string;
+  name: string;
+  nameAr?: string;
+  nameEn?: string;
+  price: number;
+  ingredients?: string;
+  ingredientsAr?: string;
+  ingredientsEn?: string;
+  priceTw?: number;
+  categoryId: string;
+  subcategoryId?: string | null;
+  visible?: boolean;
+  star?: boolean;
+  createdAt?: number;
+  order?: number;
+}
+
+/* ================= Props ================= */
+interface Props {
+  onLoadingChange?: (loading: boolean) => void;
+  onFeaturedCheck?: (hasFeatured: boolean) => void;
+  onFeaturedItemsChange?: (items: Item[]) => void;
+  orderSystem?: boolean;
+  onItemClick?: (item: Item) => void;
+  onDetailsClick?: (item: Item) => void;
+}
+
+type LoadingPhase = "loading" | "skeleton" | "ready";
+
+
+
+export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItemsChange, orderSystem: initialOrderSystem, onItemClick, onDetailsClick }: Props) {
+
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [phase, setPhase] = useState<LoadingPhase>("loading");
+  const [orderSystem, setOrderSystem] = useState<boolean>(initialOrderSystem ?? true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>("all");
+  const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(3);
+
+  const isMounted = useRef(true);
+  const startTime = useRef(Date.now());
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  /* ================= Data Fetching ================= */
+  useEffect(() => {
+    isMounted.current = true;
+    onLoadingChange?.(true);
+
+    let unsubscribe: (() => void) | null = null;
+
+    const loadData = async () => {
+      try {
+        const { data } = await MenuService.getMenuWithFallback();
+        if (!isMounted.current) return;
+
+        setCategories(data.categories);
+        setSubcategories(data.subcategories);
+        setItems(data.items);
+        setOrderSystem(data.orderSystem);
+
+        const availableWithItems = data.categories.filter((cat: any) =>
+          cat.available !== false && cat.visible !== false && data.items.some((i: any) => i.categoryId === cat.id)
+        );
+
+        if (availableWithItems.length > 0 && (!activeCategoryId || activeCategoryId === "all")) {
+          // Default is "all", which we handle in the UI, but if we need a specific first category:
+          // setActiveCategoryId("all"); // Or the first one if "all" is disabled
+        }
+
+        const elapsed = Date.now() - startTime.current;
+        const MIN_LOADING_TIME = 2200;
+        const remainingFetchTime = Math.max(0, MIN_LOADING_TIME - elapsed);
+
+        setTimeout(() => {
+          if (!isMounted.current) return;
+          onLoadingChange?.(false);
+          setPhase("ready"); // Skip skeleton for an instant, clean transition
+        }, remainingFetchTime);
+
+        unsubscribe = MenuService.subscribeToMenuUpdates((freshData) => {
+          if (!isMounted.current) return;
+          setCategories(freshData.categories);
+          setSubcategories(freshData.subcategories);
+          setItems(freshData.items);
+          setOrderSystem(freshData.orderSystem);
+        });
+      } catch (err) {
+        console.error("Menu load failed:", err);
+        if (isMounted.current) {
+          onLoadingChange?.(false);
+          setPhase("ready");
+        }
+      }
+    };
+
+    loadData();
+    return () => {
+      isMounted.current = false;
+      unsubscribe?.();
+    };
+  }, [onLoadingChange]);
+
+  /* ================= Derived Data (Optimized) ================= */
+  const visibleCategoryIds = useMemo(() => {
+    return new Set(
+      categories
+        .filter(cat => cat.visible !== false && cat.available !== false)
+        .map(cat => cat.id)
+    );
+  }, [categories]);
+
+  const featuredItems = useMemo(() =>
+    items
+      .filter(i => {
+        if (!visibleCategoryIds.has(i.categoryId)) return false;
+        return (i.star === true || (i as any).isFeatured === true);
+      })
+      .sort((a, b) => {
+        if (a.visible === false && b.visible !== false) return 1;
+        if (a.visible !== false && b.visible === false) return -1;
+        return (a.order ?? 0) - (b.order ?? 0);
+      }),
+    [items, visibleCategoryIds]
+  );
+
+  const availableCategories = useMemo(() => {
+    return categories
+      .filter(cat => {
+        // Must be visible and available
+        if (cat.visible === false || cat.available === false) return false;
+        // Show category if it has at least one item, even if unavailable
+        return items.some(i => i.categoryId === cat.id);
+      })
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [categories, items]);
+
+  const filteredItems = useMemo(() => {
+    const search = searchTerm?.toLowerCase() ?? "";
+    if (!search) return [];
+    return items
+      .filter((item) => {
+        if (!visibleCategoryIds.has(item.categoryId)) return false;
+        const name = (item.nameAr || item.name || "").toLowerCase();
+        const ingredients = (item.ingredientsAr || item.ingredients || "").toLowerCase();
+        return name.includes(search) || ingredients.includes(search);
+      })
+      .sort((a, b) => {
+        if (a.visible === false && b.visible !== false) return 1;
+        if (a.visible !== false && b.visible === false) return -1;
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+  }, [items, searchTerm, visibleCategoryIds]);
+
+  /**
+   * Pre-compute sorted items per category ONCE.
+   * Previously, filter+sort ran inside JSX on every render for every visible
+   * category — this was a major source of jank.
+   */
+  const itemsByCategory = useMemo(() => {
+    const map: Record<string, Item[]> = {};
+    availableCategories.forEach((cat) => {
+      map[cat.id] = items
+        .filter((i) => i.categoryId === cat.id)
+        .sort((a, b) => {
+          if (a.visible === false && b.visible !== false) return 1;
+          if (a.visible !== false && b.visible === false) return -1;
+          return (a.order ?? 0) - (b.order ?? 0);
+        });
+    });
+    return map;
+  }, [items, availableCategories]);
+
+  /* ================= Progressive Loading ================= */
+  useEffect(() => {
+    if (activeCategoryId !== "all" && activeCategoryId !== null) return;
+    if (visibleCategoriesCount >= availableCategories.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // Small delay for smooth scroll feel
+          setTimeout(() => {
+            setVisibleCategoriesCount((prev) => Math.min(prev + 3, availableCategories.length));
+          }, 100);
+        }
+      },
+      { rootMargin: "500px", threshold: 0 }
+    );
+
+    if (bottomRef.current) observer.observe(bottomRef.current);
+
+    return () => observer.disconnect();
+  }, [visibleCategoriesCount, availableCategories?.length, activeCategoryId]);
+
+  useEffect(() => {
+    // Reset to initial count when returning to 'all'
+    if (activeCategoryId === "all" || activeCategoryId === null) {
+      setVisibleCategoriesCount(3);
+    }
+  }, [activeCategoryId]);
+
+  useEffect(() => {
+    onFeaturedCheck?.(featuredItems.length > 0);
+    onFeaturedItemsChange?.(featuredItems);
+  }, [featuredItems, onFeaturedCheck, onFeaturedItemsChange]);
+
+  const handleItemClick = useCallback((item: Item) => {
+    onItemClick?.(item);
+  }, [onItemClick]);
+
+  const activeCategory = useMemo(() =>
+    availableCategories.find(c => c.id === activeCategoryId),
+    [availableCategories, activeCategoryId]
+  );
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearchTerm("");
+  }, []);
+
+  /* ================= Phase: Loading ================= */
+  if (phase === "loading") return null;
+
+  /* ================= Phase: Skeleton ================= */
+  if (phase === "skeleton") {
+    return (
+      <div className="menu-wrapper">
+        <motion.div variants={pageVariants} initial="initial" animate="animate" className="max-w-7xl mx-auto px-4 pb-32">
+          <MenuSkeleton />
+        </motion.div>
+      </div>
+    );
+  }
+
+  /* ================= Phase: Ready ================= */
+  return (
+    <div className="menu-wrapper bg-transparent min-h-screen">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-7xl mx-auto px-3 sm:px-4 pb-16 sm:pb-24"
+      >
+        <div className="flex flex-col">
+          {/* Header Area */}
+          <div className="flex flex-col mb-5 sm:mb-8 gap-4 sm:gap-8">
+            {/* Logo or Title Placeholder if needed */}
+
+            {/* Search Bar */}
+            <div className="w-full max-w-lg mx-auto relative px-4" style={{ isolation: "isolate" }}>
+              <div
+                className="absolute right-8 top-1/2 -translate-y-1/2 z-10 pointer-events-none"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <FiSearch size={18} />
+              </div>
+              <input
+                type="text"
+                placeholder="عن ماذا تبحث؟"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full text-sm font-semibold outline-none"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1.5px solid var(--border-base)",
+                  borderRadius: "var(--radius-full)",
+                  padding: "12px 48px 12px 20px",
+                  color: "var(--text-primary)",
+                  boxShadow: "var(--shadow-card)",
+                  transition: "border-color var(--transition), box-shadow var(--transition)",
+                }}
+                onFocus={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "var(--brand-amber)";
+                  (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px var(--amber-a12), var(--shadow-card)";
+                }}
+                onBlur={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "var(--border-base)";
+                  (e.target as HTMLInputElement).style.boxShadow = "var(--shadow-card)";
+                }}
+              />
+              {searchTerm && (
+                <button
+                  onClick={handleSearchClear}
+                  aria-label="مسح البحث"
+                  className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "var(--radius-full)",
+                    background: "var(--amber-a08)",
+                    color: "var(--text-muted)",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background var(--transition), color var(--transition)",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--brand-amber)";
+                    (e.currentTarget as HTMLButtonElement).style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--amber-a08)";
+                    (e.currentTarget as HTMLButtonElement).style.color = "var(--text-muted)";
+                  }}
+                >
+                  <FiX size={12} />
+                </button>
+              )}
+            </div>
+
+          </div>
+
+          {/* Sticky category navigation remains active while browsing items */}
+          {!searchTerm && (
+            <CategoryNavigation
+              categories={availableCategories}
+              activeId={activeCategoryId}
+              onSelect={setActiveCategoryId}
+            />
+          )}
+
+          <div className="flex-1 w-full min-w-0">
+            <AnimatePresence mode="wait">
+              {searchTerm ? (
+                <motion.div
+                  key="search"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="show"
+                  className="flex flex-col w-full gap-4"
+                >
+                  {filteredItems.map((item) => (
+                    <ItemRow key={item.id} item={item} orderSystem={orderSystem} onClick={handleItemClick} onDetailsClick={onDetailsClick} />
+                  ))}
+                </motion.div>
+              ) : availableCategories.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="py-24 flex flex-col items-center justify-center text-center"
+                >
+                  <div
+                    className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-5"
+                    style={{ background: "var(--bg-surface)" }}
+                  >
+                    🍽️
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                      القائمة قادمة قريباً
+                    </h3>
+                    <p className="max-w-xs mx-auto text-sm" style={{ color: "var(--text-muted)" }}>
+                      نحن نُجهّز تشكيلتنا اللذيذة
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={activeCategoryId}
+                  variants={categoryVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                  className="space-y-10 sm:space-y-16 transform-gpu"
+                >
+                  {(activeCategoryId === "all" || !activeCategoryId) ? (
+                    <>
+                      {availableCategories.slice(0, visibleCategoriesCount).map((cat) => (
+                        <CategorySection
+                          key={cat.id}
+                          category={cat}
+                          subcategories={subcategories}
+                          items={itemsByCategory[cat.id] ?? []}
+                          orderSystem={orderSystem}
+                          onItemClick={handleItemClick}
+                          onDetailsClick={onDetailsClick}
+                        />
+                      ))}
+                      {visibleCategoriesCount < availableCategories.length && (
+                        <div ref={bottomRef} className="py-10 flex justify-center items-center">
+                          <div
+                            className="rounded-full"
+                            style={{
+                              width: "28px",
+                              height: "28px",
+                              border: "3px solid var(--amber-a18)",
+                              borderTopColor: "var(--brand-amber)",
+                              animation: "spin 0.75s linear infinite",
+                              opacity: 0.7,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    activeCategory && (
+                      <CategorySection
+                        category={activeCategory}
+                        subcategories={subcategories}
+                        items={itemsByCategory[activeCategory.id] ?? []}
+                        orderSystem={orderSystem}
+                        onItemClick={handleItemClick}
+                        onDetailsClick={onDetailsClick}
+                      />
+                    )
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Floating Components */}
+        <button
+          onClick={() => setShowFeedbackModal(true)}
+          aria-label="تقييم"
+          className="fixed flex items-center justify-center z-40"
+          style={{
+            bottom: "25px",
+            right: "28px",
+            width: "48px",
+            height: "48px",
+            borderRadius: "var(--radius-md)",
+            background: "var(--brand-red)",
+            color: "white",
+            border: "2px solid white",
+            cursor: "pointer",
+            boxShadow: "var(--shadow-button)",
+            transition: "background var(--transition), transform var(--transition)",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--brand-red-dark)";
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = "var(--brand-red)";
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+          }}
+          onMouseDown={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.94)";
+          }}
+          onMouseUp={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+          }}
+        >
+          <FaCommentDots size={20} />
+        </button>
+
+        <FeedbackModal show={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} orderSystem={orderSystem} />
+      </motion.div>
+    </div>
+  );
+}
