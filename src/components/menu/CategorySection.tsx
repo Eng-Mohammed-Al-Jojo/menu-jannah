@@ -61,6 +61,8 @@ export default function CategorySection({
 
   return (
     <motion.div
+      id={`menu-category-${category.id}`}
+      data-menu-category={category.id}
       variants={revealVariants}
       initial="hidden"
       whileInView="visible"

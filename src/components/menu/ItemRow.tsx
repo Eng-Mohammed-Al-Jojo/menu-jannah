@@ -14,7 +14,7 @@ interface Props {
 const ItemRow = React.memo(({ item, orderSystem, onClick, onDetailsClick }: Props) => {
   const priceOptions = useMemo(
     () => getPriceOptions(item),
-    [item.price]
+    [item.price, item.variants]
   );
   const unavailable = item.visible === false;
   const itemName = item.nameAr || item.name || "";
@@ -38,7 +38,7 @@ const ItemRow = React.memo(({ item, orderSystem, onClick, onDetailsClick }: Prop
 
   return (
     <div
-      className={`group relative flex items-center gap-2 sm:gap-4 px-1.5 py-2.5 sm:px-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[var(--bg-card)] border transition-all duration-300 transform-gpu ${unavailable
+      className={`group relative mx-3 sm:mx-0 flex items-center gap-2 sm:gap-4 px-1.5 py-2.5 sm:px-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[var(--bg-card)] border transition-all duration-300 transform-gpu ${unavailable
         ? "opacity-60 cursor-not-allowed border-neutral-200"
         : "cursor-pointer border-amber-500/12 hover:border-amber-500/35 hover:shadow-[0_8px_24px_rgba(11,59,45,0.10)] hover:-translate-y-0.5"
         }`}
@@ -101,10 +101,20 @@ const ItemRow = React.memo(({ item, orderSystem, onClick, onDetailsClick }: Prop
       {/* Price & Add Button */}
       <div className="flex flex-col items-end justify-between self-stretch shrink-0 py-0.5 gap-1">
         {/* Price Tag */}
-        <div className={`relative left-2 flex items-baseline gap-1 font-black text-amber-600 ${unavailable ? "line-through opacity-50" : ""}`}>
-          <span className="text-xs font-bold text-amber-500/75">₪</span>
-          <span className="text-sm sm:text-lg font-black tracking-tight">{formatPriceSummary(priceOptions)}</span>
+        <div className={`relative left-2 flex items-baseline gap-2 font-black text-amber-600 ${unavailable ? "line-through opacity-50" : ""}`}>
+          {item.promotionOriginalPrice && (
+            <span className="text-[10px] text-neutral-400 line-through no-underline">
+              {item.promotionOriginalPrice.toFixed(2)} ₪
+            </span>
+          )}
+          <span className="text-sm sm:text-lg font-black tracking-tight" dir="ltr">{formatPriceSummary(priceOptions)}</span>
         </div>
+
+        {unavailable && (
+          <span className="text-[10px] font-bold text-red-600 whitespace-nowrap">
+            لقد نفذت الكمية
+          </span>
+        )}
 
         {/* Action Button */}
         {canOrder ? (

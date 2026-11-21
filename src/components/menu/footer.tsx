@@ -159,10 +159,16 @@ export default function Footer() {
             {footer.phone && (
               <a
                 href={`tel:${footer.phone}`}
-                className="flex items-center gap-1.5 hover:text-amber-400 transition-colors"
+                aria-label={`الاتصال على ${footer.phone}`}
+                className="group flex min-w-[190px] items-center gap-3 rounded-2xl border border-amber-400/45 bg-amber-500/15 px-4 py-2.5 text-right shadow-[0_8px_24px_rgba(245,158,11,.10)] transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-500/25"
               >
-                <FaPhoneAlt className="text-amber-500 shrink-0" size={11} />
-                <span dir="ltr">{footer.phone}</span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400 text-[var(--brand-obsidian)] shadow-sm group-hover:scale-105 transition-transform">
+                  <FaPhoneAlt size={14} />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-amber-200/80">للاتصال والاستفسار</span>
+                  <span dir="ltr" className="text-base font-black tracking-wide text-amber-300">{footer.phone}</span>
+                </span>
               </a>
             )}
           </div>

@@ -1,6 +1,7 @@
 /**
  * Promotion Types — Digital Menu Snounu
- * العروض مستقلة تمامًا عن items ومرتبطة بها عبر itemId فقط
+ * العروض مرتبطة بمصدر الصنف عبر itemId. variantPrices هو المصدر canonical
+ * للعروض متعددة الخيارات، مع إبقاء الحقول القديمة للتوافق مع السجلات السابقة.
  */
 
 export type DiscountType = 'percentage' | 'fixed';
@@ -21,6 +22,10 @@ export interface Promotion {
   discountType: DiscountType;
   discountValue: number;
   finalPrice: number; // محسوب تلقائياً ومخزن للأداء
+  /** أسعار العرض حسب variant.id — لا تُنسخ بيانات المنتج إلى العرض. */
+  variantPrices?: Record<string, number>;
+  needsReview?: boolean;
+  disabledReason?: 'item_deleted' | 'variants_changed';
 
   // الصورة
   image?: string;

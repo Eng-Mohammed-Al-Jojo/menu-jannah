@@ -169,17 +169,16 @@ export default function ItemDetailsDrawer({ item, isOpen, onClose, orderSystem =
                   <span className="text-xs font-semibold text-neutral-400 block">
                     السعر
                   </span>
-                  <div className="text-2xl font-black text-amber-600 flex items-baseline gap-1">
-                    <span className="text-sm">₪</span>
+                  <div className="text-2xl font-black text-amber-600 flex items-baseline gap-1" dir="ltr">
                     {formatPriceSummary(priceOptions)}
                   </div>
                 </div>
 
                 {priceOptions.length > 1 && (
                   <div className="flex flex-wrap justify-end gap-1.5">
-                    {priceOptions.map((option) => (
-                      <span key={`${option.label}-${option.price}`} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-700">
-                        {option.label}: {option.price}₪
+                        {priceOptions.map((option) => (
+                          <span key={`${option.label}-${option.price}`} className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                            <span>{option.label}:</span><span className="flex items-center gap-1.5" dir="ltr">{option.originalPrice && <span className="text-neutral-400 line-through">{option.originalPrice.toFixed(2)} ₪</span>}<span className="font-black text-emerald-700">{option.price.toFixed(2)} ₪</span></span>
                       </span>
                     ))}
                   </div>

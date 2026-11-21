@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect } from "react";
 import CartButton from "../components/cart/CartButton";
 import Footer from "../components/menu/footer";
 import Menu, { type Item } from "../components/menu/Menu";
@@ -25,6 +25,18 @@ export default function MenuPage() {
   const [orderSystem, setOrderSystem] = useState(ORDER_SYSTEM_ENABLED);
   const [openingHours, setOpeningHours] = useState<OpeningHours>(DEFAULT_OPENING_HOURS);
   const [isOpenNow, setIsOpenNow] = useState(() => isRestaurantOpen(DEFAULT_OPENING_HOURS));
+
+  // Always open the menu at its beginning instead of inheriting the browser's
+  // previous scroll position after a refresh/navigation.
+  useLayoutEffect(() => {
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+
+    return () => {
+      window.history.scrollRestoration = previousRestoration;
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = FirebaseService.listen("settings/orderSystem", (value) => {
@@ -176,7 +188,7 @@ export default function MenuPage() {
         {/* ═══════════════════════════
             MENU CONTENT — Warm Cream Canvas
             ═══════════════════════════ */}
-        <div className="relative z-20 flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 pb-28 pt-2 sm:pt-3">
+        <div className="relative z-20 flex-1 w-full max-w-6xl mx-auto pb-28 pt-2 sm:pt-3">
           {/* Promotions Section */}
           <PromotionsSection onReady={handlePromotionsReady} />
           {isDataReady && hasFeatured && (

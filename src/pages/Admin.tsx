@@ -25,6 +25,7 @@ import Popup from "../components/admin/Popup";
 import { type PopupState } from "../components/admin/types";
 import PaymentMethodsModal from "../components/admin/PaymentMethodsModal";
 import AdminLayout from "../components/admin/AdminLayout";
+import { PromotionService } from "../services/promotionService";
 
 
 export default function Admin() {
@@ -44,6 +45,9 @@ export default function Admin() {
   const [editItemValues, setEditItemValues] = useState<{
     itemNameAr: string;
     itemPrice: string;
+    priceLabelsAr: string;
+    variants: Array<{ id?: string; name: string; price: number }>;
+    pricingMode: "single" | "variants";
     priceTw: string;
     selectedCategory: string;
     selectedSubcategory: string;
@@ -52,6 +56,9 @@ export default function Admin() {
   }>({
     itemNameAr: "",
     itemPrice: "",
+    priceLabelsAr: "",
+    variants: [],
+    pricingMode: "single",
     priceTw: "",
     selectedCategory: "",
     selectedSubcategory: "",
@@ -188,26 +195,31 @@ export default function Admin() {
   };
 
   const deleteCategory = async (id: string) => {
-    await remove(ref(db, `categories/${id}`));
-    Object.keys(subcategories).forEach((subId) => {
-      if (subcategories[subId].categoryId === id) remove(ref(db, `subcategories/${subId}`));
-    });
-    Object.keys(items).forEach((itemId) => {
-      if (items[itemId].categoryId === id) remove(ref(db, `items/${itemId}`));
-    });
+    const categoryItemIds = Object.keys(items).filter((itemId) => items[itemId].categoryId === id);
+    await Promise.all(categoryItemIds.map((itemId) => PromotionService.deactivateForItem(itemId, 'item_deleted')));
+    await Promise.all([
+      remove(ref(db, `categories/${id}`)),
+      ...Object.keys(subcategories).filter((subId) => subcategories[subId].categoryId === id).map((subId) => remove(ref(db, `subcategories/${subId}`))),
+      ...categoryItemIds.map((itemId) => remove(ref(db, `items/${itemId}`))),
+    ]);
     setPopup({ type: null });
     showNotification(t('admin.category_deleted_success') + " ✅");
   };
 
-  const addSubcategory = async (categoryId: string, nameAr: string, image?: string) => {
+  const addSubcategory = async (categoryId: string, nameAr: string, _nameEn = "", image?: string) => {
     if (!nameAr.trim()) {
       showNotification(t('admin.subcategory_name_required'), 'error');
+      return;
+    }
+    if (!categoryId) {
+      showNotification('يرجى تحديد القسم الرئيسي أولاً', 'error');
       return;
     }
     await push(ref(db, "subcategories"), {
       nameAr: nameAr.trim(),
       categoryId,
       image: image || "",
+      nameEn: _nameEn.trim(),
       visible: true,
       order: Object.values(subcategories).filter((s: any) => s.categoryId === categoryId).length,
       createdAt: Date.now()
@@ -228,6 +240,7 @@ export default function Admin() {
 
   const deleteItem = async () => {
     if (!popup.id) return;
+    await PromotionService.deactivateForItem(popup.id, 'item_deleted');
     await remove(ref(db, `items/${popup.id}`));
     setPopup({ type: null });
     showNotification(t('admin.item_deleted_success'));
@@ -256,10 +269,18 @@ export default function Admin() {
 
   const updateItem = async () => {
     if (!editItemId) return;
+    const previousItem = items[editItemId];
+    const nextVariants = editItemValues.pricingMode === "variants" ? editItemValues.variants : [];
+    const previousVariantSignature = (previousItem?.variants || []).map((variant: any, index: number) => `${variant.id || `legacy-${index}`}:${variant.name}:${Number(variant.price)}`).sort().join('|');
+    const nextVariantSignature = nextVariants.map((variant, index) => `${variant.id || `legacy-${index}`}:${variant.name}:${Number(variant.price)}`).sort().join('|');
+    const variantStructureChanged = Boolean(previousItem?.variants?.length || nextVariants.length) && previousVariantSignature !== nextVariantSignature;
+    if (variantStructureChanged) await PromotionService.deactivateForItem(editItemId, 'variants_changed');
     await update(ref(db, `items/${editItemId}`), {
       nameAr: editItemValues.itemNameAr,
       ingredientsAr: normalizeIngredients(editItemValues.itemIngredientsAr || ""),
       price: editItemValues.itemPrice,
+      priceLabelsAr: editItemValues.priceLabelsAr,
+      variants: editItemValues.pricingMode === "variants" ? editItemValues.variants : null,
       priceTw: editItemValues.priceTw || "",
       categoryId: editItemValues.selectedCategory,
       subcategoryId: editItemValues.selectedSubcategory || null,
@@ -268,7 +289,7 @@ export default function Admin() {
     setPopup({ type: null });
     setEditItemId("");
     setEditItemValues({
-      itemNameAr: "", itemPrice: "", priceTw: "",
+      itemNameAr: "", itemPrice: "", priceLabelsAr: "", variants: [], pricingMode: "single", priceTw: "",
       selectedCategory: "", selectedSubcategory: "", itemIngredientsAr: "", itemImage: ""
     });
     showNotification(t('common.success') + " ✅");
@@ -580,6 +601,9 @@ export default function Admin() {
                         setEditItemValues({
                           itemNameAr: item.nameAr || "",
                           itemPrice: item.price || "",
+                          priceLabelsAr: item.priceLabelsAr || "",
+                          variants: item.variants || [],
+                          pricingMode: Array.isArray(item.variants) && item.variants.length > 0 ? "variants" : "single",
                           priceTw: item.priceTw || "",
                           selectedCategory: item.categoryId || "",
                           selectedSubcategory: item.subcategoryId || "",

@@ -56,6 +56,21 @@ export const PromotionService = {
     });
   },
 
+  /** تعطيل العروض المرتبطة بصنف محذوف أو تغيّرت متغيراته، مع إبقاء سجل العرض للتدقيق. */
+  async deactivateForItem(itemId: string, reason: 'item_deleted' | 'variants_changed'): Promise<void> {
+    const snap = await get(ref(db, PROMOTIONS_PATH));
+    if (!snap.exists()) return;
+    const updates: Record<string, unknown> = {};
+    Object.entries(snap.val() as Record<string, any>).forEach(([id, promotion]) => {
+      if (promotion?.itemId === itemId && promotion?.isActive !== false) {
+        updates[`${PROMOTIONS_PATH}/${id}/isActive`] = false;
+        updates[`${PROMOTIONS_PATH}/${id}/disabledReason`] = reason;
+        updates[`${PROMOTIONS_PATH}/${id}/needsReview`] = reason === 'variants_changed';
+      }
+    });
+    if (Object.keys(updates).length > 0) await update(ref(db), updates);
+  },
+
   /** جلب جميع العروض مرة واحدة */
   async getAll(): Promise<Promotion[]> {
     const snap = await get(ref(db, PROMOTIONS_PATH));
@@ -70,7 +85,7 @@ export const PromotionService = {
    * الاستماع لتغييرات العروض في real-time
    * يُرجع دالة إلغاء الاشتراك
    */
-  subscribe(callback: (promotions: Promotion[]) => void): Unsubscribe {
+  subscribe(callback: (promotions: Promotion[]) => void, onError?: (error: Error) => void): Unsubscribe {
     return onValue(ref(db, PROMOTIONS_PATH), (snap) => {
       if (!snap.exists()) {
         callback([]);
@@ -80,7 +95,7 @@ export const PromotionService = {
         ([id, v]: [string, any]) => ({ id, ...v })
       );
       callback(promotions.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-    });
+    }, (error) => onError?.(error));
   },
 
   /* ─────────────────────────────────────────

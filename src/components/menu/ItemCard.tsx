@@ -13,7 +13,7 @@ interface Props {
 const ItemCard = React.memo(({ item, orderSystem, onClick, onDetailsClick }: Props) => {
   const priceOptions = useMemo(
     () => getPriceOptions(item),
-    [item.price]
+    [item.price, item.variants]
   );
   const unavailable = item.visible === false;
   const itemName = item.nameAr || item.name || "";
@@ -99,9 +99,19 @@ const ItemCard = React.memo(({ item, orderSystem, onClick, onDetailsClick }: Pro
         {/* Price & Action Row */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-amber-500/08 mt-0.5">
           <div className={`flex flex-wrap items-baseline gap-1 font-black text-amber-600 ${unavailable ? "line-through opacity-50" : ""}`}>
-            <div className="flex items-baseline gap-0.5 text-base leading-none font-extrabold">
+            {item.promotionOriginalPrice && (
+              <span className="text-[11px] text-neutral-400 line-through no-underline">
+                {item.promotionOriginalPrice.toFixed(2)} ₪
+              </span>
+            )}
+            <div className="flex items-baseline gap-1 text-base leading-none font-extrabold" dir="ltr">
               {formatPriceSummary(priceOptions)}
             </div>
+            {unavailable && (
+              <span className="basis-full text-[10px] font-bold text-red-600 leading-4 no-underline">
+                لقد نفذت الكمية
+              </span>
+            )}
           </div>
 
           {canOrder ? (

@@ -22,6 +22,7 @@ export default function CartItemRow({ item }: { item: CartItem }) {
         >
             <div className="flex-1 min-w-0">
                 <p className="font-black text-(--text-main) truncate text-sm sm:text-base">{itemName}</p>
+                {item.optionLabel && <p className="text-[11px] font-bold text-primary truncate">{item.optionLabel}</p>}
                 <div className="flex items-center gap-1.5 mt-1">
                     <span className="text-xs font-bold text-primary">{item.qty} × {item.selectedPrice}</span>
                     <TbCurrencyShekel size={14} className="text-primary opacity-60" />

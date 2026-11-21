@@ -235,8 +235,16 @@ const CategoryCard: React.FC<{
               className="bg-gray-50/50 border-t border-gray-50"
             >
               <div className="p-5 space-y-4">
-                <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center justify-between mb-2 px-1 gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">{t('admin.manage_sub')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPopup({ type: "addSubcategory", parentId: cat.id })}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2 text-[11px] font-black text-snouno-dark shadow-sm transition hover:bg-amber-400 active:scale-95"
+                  >
+                    <FiPlus size={13} />
+                    إضافة قسم فرعي
+                  </button>
                 </div>
 
                 {catSubcategories.length > 0 ? (

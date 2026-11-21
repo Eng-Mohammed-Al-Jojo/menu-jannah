@@ -7,6 +7,9 @@ import { FiSearch, FiX } from "react-icons/fi";
 import { FaCommentDots } from "react-icons/fa";
 import FeedbackModal from "./FeedbackModal";
 import CategoryNavigation from "./CategoryNavigation";
+import { PromotionService } from "../../services/promotionService";
+import { isPromotionVisible, type Promotion } from "../../types/promotion";
+import type { ItemVariant } from "../../utils/priceUtils";
 
 import { MenuService } from "../../services/menuService";
 
@@ -61,6 +64,10 @@ export interface Item {
   ingredientsAr?: string;
   ingredientsEn?: string;
   priceTw?: number;
+  priceLabelsAr?: string;
+  variants?: ItemVariant[];
+  promotionPrice?: number;
+  promotionOriginalPrice?: number;
   categoryId: string;
   subcategoryId?: string | null;
   visible?: boolean;
@@ -89,11 +96,13 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [phase, setPhase] = useState<LoadingPhase>("loading");
   const [orderSystem, setOrderSystem] = useState<boolean>(initialOrderSystem ?? true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>("all");
+  const [scrollCategoryId, setScrollCategoryId] = useState<string | null>(null);
   const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(3);
 
   const isMounted = useRef(true);
@@ -159,6 +168,43 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
     };
   }, [onLoadingChange]);
 
+  useEffect(() => PromotionService.subscribe(setPromotions), []);
+
+  const itemsWithPromotions = useMemo(() => {
+    const activePromotions = new Map(
+      promotions.filter(isPromotionVisible).map((promotion) => [promotion.itemId, promotion])
+    );
+
+    return items.map((item) => {
+      const promotion = activePromotions.get(item.id);
+      if (!promotion) return item;
+
+      if (promotion.variantPrices && Array.isArray(item.variants) && item.variants.length > 0) {
+        const variants = item.variants.map((variant: any, index: number) => {
+          const key = variant.id || `legacy-${index}`;
+          const promoPrice = Number(promotion.variantPrices?.[key]);
+          if (!Number.isFinite(promoPrice) || promoPrice < 0 || promoPrice >= Number(variant.price)) return variant;
+          return { ...variant, promotionPrice: promoPrice, originalPrice: Number(variant.price), price: promoPrice };
+        });
+        return { ...item, variants, promotionId: promotion.id };
+      }
+
+      const original = promotion.priceKey === "priceTw"
+        ? Number(item.priceTw ?? 0)
+        : Number(item.price ?? 0);
+      if (!original || promotion.finalPrice >= original) return item;
+
+      return {
+        ...item,
+        ...(promotion.priceKey === "priceTw"
+          ? { priceTw: promotion.finalPrice }
+          : { price: promotion.finalPrice }),
+        promotionPrice: promotion.finalPrice,
+        promotionOriginalPrice: original,
+      };
+    });
+  }, [items, promotions]);
+
   /* ================= Derived Data (Optimized) ================= */
   const visibleCategoryIds = useMemo(() => {
     return new Set(
@@ -169,7 +215,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
   }, [categories]);
 
   const featuredItems = useMemo(() =>
-    items
+    itemsWithPromotions
       .filter(i => {
         if (!visibleCategoryIds.has(i.categoryId)) return false;
         return (i.star === true || (i as any).isFeatured === true);
@@ -179,7 +225,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
         if (a.visible !== false && b.visible === false) return -1;
         return (a.order ?? 0) - (b.order ?? 0);
       }),
-    [items, visibleCategoryIds]
+    [itemsWithPromotions, visibleCategoryIds]
   );
 
   const availableCategories = useMemo(() => {
@@ -196,7 +242,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
   const filteredItems = useMemo(() => {
     const search = searchTerm?.toLowerCase() ?? "";
     if (!search) return [];
-    return items
+    return itemsWithPromotions
       .filter((item) => {
         if (!visibleCategoryIds.has(item.categoryId)) return false;
         const name = (item.nameAr || item.name || "").toLowerCase();
@@ -208,7 +254,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
         if (a.visible !== false && b.visible === false) return -1;
         return (a.order ?? 0) - (b.order ?? 0);
       });
-  }, [items, searchTerm, visibleCategoryIds]);
+  }, [itemsWithPromotions, searchTerm, visibleCategoryIds]);
 
   /**
    * Pre-compute sorted items per category ONCE.
@@ -218,7 +264,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
   const itemsByCategory = useMemo(() => {
     const map: Record<string, Item[]> = {};
     availableCategories.forEach((cat) => {
-      map[cat.id] = items
+      map[cat.id] = itemsWithPromotions
         .filter((i) => i.categoryId === cat.id)
         .sort((a, b) => {
           if (a.visible === false && b.visible !== false) return 1;
@@ -227,7 +273,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
         });
     });
     return map;
-  }, [items, availableCategories]);
+  }, [itemsWithPromotions, availableCategories]);
 
   /* ================= Progressive Loading ================= */
   useEffect(() => {
@@ -250,6 +296,41 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
 
     return () => observer.disconnect();
   }, [visibleCategoriesCount, availableCategories?.length, activeCategoryId]);
+
+  // Keep the tab bar synchronized with the section currently visible on screen.
+  useEffect(() => {
+    if (activeCategoryId !== "all" || searchTerm || availableCategories.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) {
+          setScrollCategoryId(visible.target.getAttribute("data-menu-category"));
+        }
+      },
+      { rootMargin: "-25% 0px -60% 0px", threshold: 0 }
+    );
+
+    availableCategories.forEach((category) => {
+      const element = document.getElementById(`menu-category-${category.id}`);
+      if (element) observer.observe(element);
+    });
+    return () => observer.disconnect();
+  }, [activeCategoryId, availableCategories, searchTerm, visibleCategoriesCount]);
+
+  const handleCategorySelect = useCallback((id: string) => {
+    setScrollCategoryId(null);
+    setActiveCategoryId(id);
+    if (id === "all") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      requestAnimationFrame(() => {
+        document.getElementById(`menu-category-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, []);
 
   useEffect(() => {
     // Reset to initial count when returning to 'all'
@@ -301,7 +382,7 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="max-w-7xl mx-auto px-3 sm:px-4 pb-16 sm:pb-24"
+        className="max-w-7xl mx-auto px-0 pb-16 sm:pb-24"
       >
         <div className="flex flex-col">
           {/* Header Area */}
@@ -375,8 +456,8 @@ export default function Menu({ onLoadingChange, onFeaturedCheck, onFeaturedItems
           {!searchTerm && (
             <CategoryNavigation
               categories={availableCategories}
-              activeId={activeCategoryId}
-              onSelect={setActiveCategoryId}
+              activeId={activeCategoryId === "all" ? (scrollCategoryId || "all") : activeCategoryId}
+              onSelect={handleCategorySelect}
             />
           )}
 

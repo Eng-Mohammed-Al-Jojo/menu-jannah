@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiX, FiCheck, FiTrash2, FiLogOut, FiKey, FiMail, FiEdit, FiLayers, FiType, FiDollarSign, FiInfo, FiImage } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import FeaturedGallery from "./FeaturedGallery";
+import CustomSelect from "./CustomSelect";
 
 interface Props {
   popup: PopupState;
@@ -19,6 +20,9 @@ interface Props {
   editItemValues?: {
     itemNameAr: string;
     itemPrice: string;
+    priceLabelsAr: string;
+    variants: Array<{ id?: string; name: string; price: number }>;
+    pricingMode: "single" | "variants";
     priceTw: string;
     selectedCategory: string;
     selectedSubcategory: string;
@@ -28,6 +32,9 @@ interface Props {
   setEditItemValues?: (values: {
     itemNameAr: string;
     itemPrice: string;
+    priceLabelsAr: string;
+    variants: Array<{ id?: string; name: string; price: number }>;
+    pricingMode: "single" | "variants";
     priceTw: string;
     selectedCategory: string;
     selectedSubcategory: string;
@@ -104,11 +111,11 @@ const Popup: React.FC<Props> = ({
     setResetPasswordPopup && setResetPasswordPopup(false);
   };
 
-  const inputClass = "w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 pr-12 pl-6 text-right text-sm font-bold outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all shadow-inner";
+  const inputClass = "w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pr-11 pl-4 text-right text-sm font-bold outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all shadow-inner";
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-100 flex items-center justify-center p-3 sm:p-6">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -123,7 +130,7 @@ const Popup: React.FC<Props> = ({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-[3rem] border border-gray-100 shadow-premium z-10"        >
+          className="relative w-full max-w-lg max-h-[min(90vh,720px)] overflow-y-auto bg-white rounded-2xl border border-gray-100 shadow-premium z-10"        >
           {/* Close Button */}
           <button
             onClick={closePopup}
@@ -132,27 +139,27 @@ const Popup: React.FC<Props> = ({
             <FiX size={20} />
           </button>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-5">
             {/* ===== Logout ===== */}
             {popup.type === "logout" && (
-              <div className="text-center space-y-8">
+              <div className="text-center space-y-5">
                 <div className="w-24 h-24 bg-secondary/5 text-secondary rounded-4xl flex items-center justify-center mx-auto text-4xl shadow-inner border border-secondary/10">
                   <FiLogOut />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">{t('admin.logout_title')}؟</h2>
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">{t('admin.logout_title')}؟</h2>
                   <p className="text-gray-400 font-bold mt-2 uppercase tracking-widest text-[11px]">{t('admin.logout_confirm')}</p>
                 </div>
-                <div className="flex flex-col gap-4">
+                <div className="order-30 flex flex-col gap-4">
                   <button
                     onClick={() => { logout && logout(); closePopup(); }}
-                    className="w-full py-5 rounded-2xl bg-secondary text-white font-black shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-secondary text-white font-black shadow-lg shadow-secondary/20 hover:bg-red-600 transition-all text-sm"
                   >
                     {t('admin.logout_title')}
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-gray-50 text-gray-500 font-black border border-gray-100 hover:bg-gray-100 transition-all text-sm"
                   >
                     {t('common.cancel')}
                   </button>
@@ -162,12 +169,12 @@ const Popup: React.FC<Props> = ({
 
             {/* ===== Add/Edit/Delete Subcategory ===== */}
             {(popup.type === "addSubcategory" || popup.type === "editSubcategory" || popup.type === "deleteSubcategory") && (
-              <div className="text-center space-y-8">
+              <div className="text-center space-y-5">
                 <div className={`w-24 h-24 rounded-4xl flex items-center justify-center mx-auto text-4xl shadow-inner border ${popup.type === 'deleteSubcategory' ? 'bg-secondary/5 text-secondary border-secondary/10' : 'bg-primary/5 text-primary border-primary/10'}`}>
                   {popup.type === 'deleteSubcategory' ? <FiTrash2 /> : (popup.type === 'editSubcategory' ? <FiEdit /> : <FiLayers />)}
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                     {popup.type === "addSubcategory" ? t('admin.add_subcategory') : (popup.type === "editSubcategory" ? t('admin.edit_subcategory') : t('admin.delete_subcategory'))}
                   </h2>
                 </div>
@@ -237,13 +244,13 @@ const Popup: React.FC<Props> = ({
                       }
                       closePopup();
                     }}
-                    className={`w-full py-5 rounded-2xl text-white font-black shadow-xl transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-widest text-sm ${popup.type === 'deleteSubcategory' ? 'bg-secondary shadow-secondary/20' : 'bg-primary shadow-primary/20'}`}
+                    className={`w-full py-3.5 rounded-xl text-white font-black shadow-lg transition-all hover:scale-[1.01] ${popup.type === 'deleteSubcategory' ? 'bg-secondary shadow-secondary/20' : 'bg-primary shadow-primary/20'}`}
                   >
                     {popup.type === "deleteSubcategory" ? t('common.delete') : t('common.save')}
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-gray-50 text-gray-500 font-black border border-gray-100 hover:bg-gray-100 transition-all text-sm"
                   >
                     {t('common.cancel')}
                   </button>
@@ -252,25 +259,39 @@ const Popup: React.FC<Props> = ({
             )}
 
             {/* ===== Add / Edit / Delete Category ===== */}
-            {(popup.type === "addCategory" || popup.type === "editCategory" || popup.type === "deleteCategory") && (
+            {popup.type === "deleteCategory" && (
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500 border border-red-100">
+                  <FiTrash2 size={24} />
+                </div>
+                <h2 className="text-lg font-black text-gray-900">حذف القسم؟</h2>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">هل أنت متأكد من حذف هذا القسم؟ قد تتأثر الأصناف المرتبطة به، ولا يمكن التراجع عن العملية.</p>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => { deleteCategory && deleteCategory(popup.id!); closePopup(); }}
+                    className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all"
+                  >حذف القسم</button>
+                  <button
+                    onClick={closePopup}
+                    className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600 hover:bg-gray-100 transition-all"
+                  >{t('common.cancel')}</button>
+                </div>
+              </div>
+            )}
+
+            {(popup.type === "addCategory" || popup.type === "editCategory") && (
               <div className="text-center space-y-6">
-                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-inner border ${
-                  popup.type === 'deleteCategory'
-                    ? 'bg-secondary/5 text-secondary border-secondary/10'
-                    : 'bg-amber-50 text-amber-500 border-amber-100'
-                }`}>
-                  {popup.type === 'deleteCategory' ? <FiTrash2 /> : (popup.type === 'editCategory' ? <FiEdit /> : <FiLayers />)}
+                <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto text-3xl shadow-inner border bg-amber-50 text-amber-500 border-amber-100">
+                  {popup.type === 'editCategory' ? <FiEdit /> : <FiLayers />}
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                     {popup.type === "addCategory"
                       ? t('admin.add_category_title')
-                      : (popup.type === "editCategory" ? "تعديل اسم الفئة / القسم" : t('admin.delete_category_title'))}
+                      : "تعديل اسم الفئة / القسم"}
                   </h2>
                   <p className="text-xs text-neutral-400 font-bold mt-1">
-                    {popup.type === "deleteCategory"
-                      ? "هل أنت متأكد من حذف هذه الفئة بالكامل؟"
-                      : "أدخل اسم الفئة للتحكم في عرضها في المنيو"}
+                    أدخل اسم الفئة للتحكم في عرضها في المنيو
                   </p>
                 </div>
 
@@ -302,22 +323,14 @@ const Popup: React.FC<Props> = ({
                         addCategory && addCategory();
                       } else if (popup.type === "editCategory") {
                         updateCategoryName && popup.id && updateCategoryName(popup.id, catNameAr);
-                      } else {
-                        deleteCategory && deleteCategory(popup.id!);
                       }
                       closePopup();
                     }}
-                    className={`w-full py-4 rounded-2xl text-white font-black shadow-lg transition-all hover:scale-[1.01] active:scale-98 uppercase tracking-widest text-sm flex items-center justify-center gap-2 cursor-pointer ${
-                      popup.type === 'deleteCategory'
-                        ? 'bg-secondary shadow-secondary/20 hover:bg-red-600'
-                        : 'bg-amber-500 text-snouno-dark shadow-amber-500/20 hover:bg-amber-400'
-                    }`}
+                    className="w-full py-4 rounded-2xl bg-amber-500 text-snouno-dark font-black shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-400 hover:scale-[1.01] active:scale-98 uppercase tracking-widest text-sm flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <FiCheck size={18} />
                     <span>
-                      {popup.type === "addCategory"
-                        ? "تأكيد الإضافة"
-                        : (popup.type === "editCategory" ? "تأكيد التعديل" : t('common.delete'))}
+                      {popup.type === "addCategory" ? "تأكيد الإضافة" : "تأكيد التعديل"}
                     </span>
                   </button>
                   <button
@@ -332,12 +345,12 @@ const Popup: React.FC<Props> = ({
 
             {/* ===== Category/Subcategory Image Selection ===== */}
             {(popup.type === "categoryImage" || popup.type === "subcategoryImage") && (
-              <div className="text-center space-y-8">
+              <div className="text-center space-y-5">
                 <div className="w-24 h-24 bg-primary/5 text-primary rounded-4xl border border-primary/10 flex items-center justify-center mx-auto text-4xl shadow-inner">
                   <FiImage />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">{t('admin.select_image')}</h2>
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">{t('admin.select_image')}</h2>
                 </div>
                 <div className="space-y-4">
                   <div className="flex flex-col items-center gap-3 p-4 bg-neutral-50 rounded-2xl border border-neutral-200">
@@ -387,13 +400,13 @@ const Popup: React.FC<Props> = ({
                       closePopup();
                       setSelectedImg("");
                     }}
-                    className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all text-sm"
                   >
                     {t('common.save')}
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-gray-50 text-gray-500 font-black border border-gray-100 hover:bg-gray-100 transition-all text-sm"
                   >
                     {t('common.cancel')}
                   </button>
@@ -403,24 +416,22 @@ const Popup: React.FC<Props> = ({
 
             {/* ===== Delete Item ===== */}
             {popup.type === "deleteItem" && (
-              <div className="text-center space-y-8">
-                <div className="w-24 h-24 bg-secondary/5 text-secondary rounded-4xl border border-secondary/10 flex items-center justify-center mx-auto text-4xl shadow-inner">
-                  <FiTrash2 />
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500 border border-red-100">
+                  <FiTrash2 size={24} />
                 </div>
-                <div>
-                  <h2 className="text-3xl font-black text-gray-900 tracking-tight">{t('admin.delete_item_title')}</h2>
-                  <p className="text-gray-400 font-bold mt-2 uppercase tracking-widest text-[11px]">{t('admin.delete_item_confirm')}</p>
-                </div>
-                <div className="flex flex-col gap-4">
+                <h2 className="text-lg font-black text-gray-900">{t('admin.delete_item_title')}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-gray-500">هل أنت متأكد من حذف هذا الصنف؟ سيتم حذف بياناته من القائمة، ولن يمكن التراجع عن العملية.</p>
+                <div className="mt-6 grid grid-cols-2 gap-3">
                   <button
                     onClick={() => { deleteItem && deleteItem(); closePopup(); }}
-                    className="w-full py-5 rounded-2xl bg-secondary text-white font-black shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
+                    className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all"
                   >
-                    {t('common.delete')}
+                    حذف الصنف
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-black text-gray-600 hover:bg-gray-100 transition-all"
                   >
                     {t('common.cancel')}
                   </button>
@@ -430,7 +441,7 @@ const Popup: React.FC<Props> = ({
 
             {/* ===== Edit Item ===== */}
             {popup.type === "editItem" && editItemValues && setEditItemValues && categories && (
-              <div className="space-y-8">
+              <div className="space-y-5">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-500 flex items-center justify-center text-3xl shadow-inner border border-amber-100">
                     <FiEdit />
@@ -444,32 +455,28 @@ const Popup: React.FC<Props> = ({
                 <div className="space-y-5">
                   <div className="relative group">
                     <FiLayers className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
-                    <select
-                      className={`${inputClass} appearance-none cursor-pointer`}
+                    <CustomSelect
+                      options={Object.keys(categories).map((id) => ({ id, name: categories[id].nameAr }))}
                       value={editItemValues.selectedCategory}
-                      onChange={(e) => setEditItemValues({ ...editItemValues, selectedCategory: e.target.value, selectedSubcategory: "" })}
-                    >
-                      {Object.keys(categories).map((id) => (
-                        <option key={id} value={id}>{categories[id].nameAr}</option>
-                      ))}
-                    </select>
+                      onChange={(value) => setEditItemValues({ ...editItemValues, selectedCategory: value, selectedSubcategory: "" })}
+                      placeholder={t('admin.select_category')}
+                    />
                   </div>
 
                   {editItemValues.selectedCategory && subcategories && (
                     <div className="relative group">
                       <FiLayers className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
-                      <select
-                        className={`${inputClass} appearance-none cursor-pointer`}
+                      <CustomSelect
+                        options={[
+                          { id: "", name: t('admin.no_subcategory') },
+                          ...Object.entries(subcategories)
+                            .filter(([, s]: any) => s.categoryId === editItemValues.selectedCategory)
+                            .map(([id, s]: any) => ({ id, name: s.nameAr })),
+                        ]}
                         value={editItemValues.selectedSubcategory}
-                        onChange={(e) => setEditItemValues({ ...editItemValues, selectedSubcategory: e.target.value })}
-                      >
-                        <option value="">{t('admin.no_subcategory')}</option>
-                        {Object.entries(subcategories)
-                          .filter(([, s]: any) => s.categoryId === editItemValues.selectedCategory)
-                          .map(([id, s]: any) => (
-                            <option key={id} value={id}>{s.nameAr}</option>
-                          ))}
-                      </select>
+                        onChange={(value) => setEditItemValues({ ...editItemValues, selectedSubcategory: value })}
+                        placeholder={t('admin.no_subcategory')}
+                      />
                     </div>
                   )}
 
@@ -477,7 +484,7 @@ const Popup: React.FC<Props> = ({
                     <FiType className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
                     <input
                       className={inputClass}
-                      placeholder={t('admin.product_name_ar')}
+                      placeholder="مثال: بقلاوة بالفستق أو معمول بالتمر"
                       value={editItemValues.itemNameAr}
                       onChange={(e) => setEditItemValues({ ...editItemValues, itemNameAr: e.target.value })}
                     />
@@ -487,24 +494,51 @@ const Popup: React.FC<Props> = ({
                     <FiInfo className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
                     <input
                       className={inputClass}
-                      placeholder={t('admin.ingredients_placeholder')}
+                      placeholder="مثال: فستق، جوز، قشطة، قطر أو سمسم"
                       value={editItemValues.itemIngredientsAr || ""}
                       onChange={(e) => setEditItemValues({ ...editItemValues, itemIngredientsAr: e.target.value })}
                     />
                   </div>
 
-                  <div className="relative group">
-                    <FiDollarSign className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
-                    <input
-                      className={inputClass}
-                      placeholder={t('common.total')}
-                      value={editItemValues.itemPrice}
-                      onChange={(e) => setEditItemValues({ ...editItemValues, itemPrice: e.target.value })}
-                    />
+                  <div className="order-10 flex items-center justify-between rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                    <div><p className="text-xs font-black text-neutral-800">طريقة تسعير الصنف</p><p className="text-[10px] text-neutral-400">سعر واحد أو متغيرات متعددة</p></div>
+                    <div className="flex gap-1 rounded-xl bg-white p-1 border border-neutral-200">
+                      <button type="button" onClick={() => setEditItemValues({ ...editItemValues, pricingMode: "single" })} className={`rounded-lg px-3 py-1.5 text-[11px] font-bold ${editItemValues.pricingMode === "single" ? "bg-snouno-dark text-amber-300" : "text-neutral-500"}`}>سعر واحد</button>
+                      <button type="button" onClick={() => setEditItemValues({ ...editItemValues, pricingMode: "variants" })} className={`rounded-lg px-3 py-1.5 text-[11px] font-bold ${editItemValues.pricingMode === "variants" ? "bg-snouno-dark text-amber-300" : "text-neutral-500"}`}>متغيرات</button>
+                    </div>
                   </div>
 
+                  {editItemValues.pricingMode === "variants" && <div className="order-20 rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 space-y-2 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-neutral-700">متغيرات الصنف</label>
+                      <button type="button" onClick={() => setEditItemValues({ ...editItemValues, variants: [...editItemValues.variants, { id: `${Date.now()}`, name: "", price: 0 }] })} className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[11px] font-black text-snouno-dark">+ إضافة متغير</button>
+                    </div>
+                    {editItemValues.variants.map((variant, index) => (
+                      <div key={variant.id || index} className="flex gap-2">
+                        <input className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10" placeholder="مثال: قطعة أو نصف كيلو" value={variant.name} onChange={(e) => setEditItemValues({ ...editItemValues, variants: editItemValues.variants.map((v, i) => i === index ? { ...v, name: e.target.value } : v) })} />
+                        <input className="w-24 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10" type="number" min="0" step="0.01" placeholder="السعر ₪" value={variant.price} onChange={(e) => setEditItemValues({ ...editItemValues, variants: editItemValues.variants.map((v, i) => i === index ? { ...v, price: Number(e.target.value) } : v) })} />
+                        {editItemValues.variants.length > 1 && <button type="button" onClick={() => setEditItemValues({ ...editItemValues, variants: editItemValues.variants.filter((_, i) => i !== index) })} className="rounded-xl px-2 text-red-500">×</button>}
+                      </div>
+                    ))}
+                  </div>}
+
+                  {editItemValues.pricingMode === "single" && (
+                    <div className="relative group rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                      <FiDollarSign className="right-5 absolute top-1/2 -translate-y-1/2 text-gray-300 transition-colors group-focus-within:text-primary" />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={inputClass}
+                        placeholder="السعر"
+                        value={editItemValues.itemPrice}
+                        onChange={(e) => setEditItemValues({ ...editItemValues, itemPrice: e.target.value })}
+                      />
+                    </div>
+                  )}
+
                   {/* Image Selector: Gallery Only */}
-                  <div className="space-y-2 text-right">
+                  <div className="order-20 space-y-2 text-right">
                     <label className="text-xs font-black text-neutral-500 uppercase tracking-widest px-1">صورة المنتج</label>
                     <div className="flex items-center gap-3 p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200">
                       {editItemValues.itemImage ? (
@@ -543,16 +577,16 @@ const Popup: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="order-30 flex flex-col gap-4">
                   <button
                     onClick={() => { updateItem && updateItem(); closePopup(); }}
-                    className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-3"
+                    className="w-full py-3.5 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all text-sm flex items-center justify-center gap-3"
                   >
                     <FiCheck size={20} /> {t('admin.save_edits')}
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-gray-50 text-gray-500 font-black border border-gray-100 hover:bg-gray-100 transition-all text-sm"
                   >
                     {t('common.cancel')}
                   </button>
@@ -562,13 +596,13 @@ const Popup: React.FC<Props> = ({
 
             {/* ===== Reset Password ===== */}
             {resetPasswordPopup && (
-              <div className="space-y-8">
+              <div className="space-y-5">
                 <div className="text-center space-y-6 mb-2">
                   <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-4xl border border-blue-100 flex items-center justify-center mx-auto text-4xl shadow-inner">
                     <FiKey />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">{t('admin.account_reset_title')}</h2>
+                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">{t('admin.account_reset_title')}</h2>
                     <p className="text-gray-400 font-bold mt-2 uppercase tracking-widest text-[11px]">{t('admin.account_reset_desc')}</p>
                   </div>
                 </div>
@@ -595,13 +629,13 @@ const Popup: React.FC<Props> = ({
                 <div className="flex flex-col gap-4">
                   <button
                     onClick={handleResetPassword}
-                    className="w-full py-5 rounded-2xl bg-primary text-white font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-primary text-white font-black shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all text-sm"
                   >
                     {t('admin.send_reset_link')}
                   </button>
                   <button
                     onClick={closePopup}
-                    className="w-full py-5 rounded-2xl bg-gray-50 text-gray-400 font-black border border-gray-100 hover:bg-gray-100 transition-all uppercase tracking-widest text-sm"
+                    className="w-full py-3.5 rounded-xl bg-gray-50 text-gray-500 font-black border border-gray-100 hover:bg-gray-100 transition-all text-sm"
                   >
                     {t('common.cancel')}
                   </button>

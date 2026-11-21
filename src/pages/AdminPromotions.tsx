@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import AdminLayout from '../components/admin/AdminLayout';
 import FeaturedGallery from '../components/admin/FeaturedGallery';
+import CustomSelect from '../components/admin/CustomSelect';
 import { PromotionService } from '../services/promotionService';
 import {
   type Promotion,
@@ -75,6 +76,7 @@ interface FormState {
   durationDays: string;
   isActive: boolean;
   order: string;
+  variantPrices: Record<string, string>;
 }
 
 const EMPTY_FORM: FormState = {
@@ -92,6 +94,7 @@ const EMPTY_FORM: FormState = {
   durationDays: '',
   isActive: true,
   order: '0',
+  variantPrices: {},
 };
 
 interface PromotionFormProps {
@@ -125,6 +128,7 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
         durationDays: '',
         isActive: editingPromotion.isActive,
         order: String(editingPromotion.order),
+        variantPrices: Object.fromEntries(Object.entries(editingPromotion.variantPrices || {}).map(([id, price]) => [id, String(price)])),
       });
     } else {
       setForm(EMPTY_FORM);
@@ -134,6 +138,7 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
 
   // الصنف المختار
   const selectedItem = items[form.itemId];
+  const itemVariants = (selectedItem?.variants || []) as Array<{ id?: string; name: string; price: number }>;
 
   // الأسعار المتاحة للصنف
   const availablePrices = useMemo(() => {
@@ -163,6 +168,18 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
     setForm(f => ({ ...f, priceKey: chosen.key, originalPrice: String(chosen.value) }));
   }, [form.itemId, availablePrices]);
 
+  // Keep variant pricing keyed to the original product variant ids.
+  useEffect(() => {
+    if (!selectedItem || itemVariants.length === 0) return;
+    setForm(f => ({
+      ...f,
+      variantPrices: Object.fromEntries(itemVariants.map((v, index) => {
+        const id = v.id || `legacy-${index}`;
+        return [id, f.variantPrices[id] ?? ''];
+      })),
+    }));
+  }, [form.itemId, selectedItem]);
+
   // حساب السعر بعد الخصم تلقائياً
   useEffect(() => {
     const orig = parseFloat(form.originalPrice);
@@ -190,33 +207,50 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
     const errs: Partial<Record<keyof FormState, string>> = {};
     if (!form.itemId) errs.itemId = 'يرجى اختيار الصنف';
     if (!form.title.trim()) errs.title = 'يرجى إدخال عنوان العرض';
-    if (!form.originalPrice || parseFloat(form.originalPrice) <= 0) errs.originalPrice = 'السعر الأصلي غير صحيح';
-    if (!form.discountValue || parseFloat(form.discountValue) <= 0) errs.discountValue = 'قيمة الخصم مطلوبة';
-    if (form.discountType === 'percentage' && parseFloat(form.discountValue) > 100) errs.discountValue = 'النسبة لا يمكن أن تتجاوز 100%';
-    if (parseFloat(form.finalPrice) < 0) errs.finalPrice = 'السعر النهائي لا يمكن أن يكون سالباً';
+    if (itemVariants.length === 0 && (!form.originalPrice || parseFloat(form.originalPrice) <= 0)) errs.originalPrice = 'السعر الأصلي غير صحيح';
+    if (itemVariants.length === 0) {
+      if (!form.discountValue || parseFloat(form.discountValue) <= 0) errs.discountValue = 'قيمة الخصم مطلوبة';
+      if (form.discountType === 'percentage' && parseFloat(form.discountValue) > 100) errs.discountValue = 'النسبة لا يمكن أن تتجاوز 100%';
+      if (parseFloat(form.finalPrice) < 0 || parseFloat(form.finalPrice) > parseFloat(form.originalPrice)) errs.finalPrice = 'السعر النهائي يجب أن يكون بين 0 والسعر الأصلي';
+    }
     if (!form.startDate) errs.startDate = 'يرجى تحديد تاريخ البداية';
     if (!form.endDate) errs.endDate = 'يرجى تحديد تاريخ النهاية';
     if (form.startDate && form.endDate && form.endDate < form.startDate) errs.endDate = 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية';
+    if (itemVariants.length > 0 && itemVariants.some((v, index) => {
+      const value = Number(form.variantPrices[v.id || `legacy-${index}`]);
+      return !Number.isFinite(value) || value < 0 || value >= Number(v.price);
+    })) errs.finalPrice = 'أدخل سعر عرض أقل من السعر الأصلي لكل خيار';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    const firstVariant = itemVariants[0];
+    const firstVariantPrice = firstVariant ? Number(form.variantPrices[firstVariant.id || 'legacy-0']) : 0;
     const payload: any = {
       itemId: form.itemId,
       priceKey: form.priceKey,
-      originalPrice: parseFloat(form.originalPrice),
+      originalPrice: itemVariants.length > 0 ? Number(firstVariant.price) : parseFloat(form.originalPrice),
       discountType: form.discountType,
-      discountValue: parseFloat(form.discountValue),
-      finalPrice: parseFloat(form.finalPrice),
+      discountValue: itemVariants.length > 0 ? 0 : parseFloat(form.discountValue),
+      finalPrice: itemVariants.length > 0
+        ? firstVariantPrice
+        : parseFloat(form.finalPrice),
       title: form.title.trim(),
       startDate: form.startDate,
       endDate: form.endDate,
       isActive: form.isActive,
+      needsReview: false,
+      disabledReason: null,
       order: parseInt(form.order) || 0,
       createdAt: editingPromotion?.createdAt || Date.now(),
     };
+    if (itemVariants.length > 0) {
+      payload.variantPrices = Object.fromEntries(itemVariants.map((v, index) => [
+        v.id || `legacy-${index}`, Number(form.variantPrices[v.id || `legacy-${index}`]),
+      ]));
+    }
 
     if (form.description.trim()) {
       payload.description = form.description.trim();
@@ -266,43 +300,56 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>الصنف *</label>
-            <select
-              className={inputClass(!!errors.itemId)}
+            <CustomSelect
+              options={[
+                { id: '', name: '— اختر الصنف —' },
+                ...Object.entries(items)
+                  .sort(([, a]: any, [, b]: any) => (a.nameAr || '').localeCompare(b.nameAr || ''))
+                  .map(([id, item]: any) => ({ id, name: item.nameAr || item.name })),
+              ]}
               value={form.itemId}
-              onChange={e => setForm(f => ({ ...f, itemId: e.target.value }))}
-            >
-              <option value="">— اختر الصنف —</option>
-              {Object.entries(items)
-                .sort(([, a]: any, [, b]: any) => (a.nameAr || '').localeCompare(b.nameAr || ''))
-                .map(([id, item]: any) => (
-                  <option key={id} value={id}>{item.nameAr || item.name}</option>
-                ))}
-            </select>
+              onChange={value => setForm(f => ({ ...f, itemId: value }))}
+              error={!!errors.itemId}
+              placeholder="— اختر الصنف —"
+            />
             {errors.itemId && <p className="text-red-500 text-xs mt-1 px-1">{errors.itemId}</p>}
           </div>
 
           <div>
             <label className={labelClass}>السعر / الحجم</label>
-            <select
-              className={inputClass()}
+            <CustomSelect
+              options={availablePrices.length === 0
+                ? [{ id: 'price', name: '— اختر صنفاً أولاً —' }]
+                : availablePrices.map(p => ({ id: p.key, name: p.label }))}
               value={form.priceKey}
-              onChange={e => {
-                const key = e.target.value as PriceKey;
+              onChange={value => {
+                const key = value as PriceKey;
                 const chosen = availablePrices.find(p => p.key === key);
                 setForm(f => ({ ...f, priceKey: key, originalPrice: chosen ? String(chosen.value) : '' }));
               }}
               disabled={availablePrices.length <= 1}
-            >
-              {availablePrices.length === 0
-                ? <option value="price">— اختر صنفاً أولاً —</option>
-                : availablePrices.map(p => <option key={p.key} value={p.key}>{p.label}</option>)
-              }
-            </select>
+              placeholder="— اختر صنفاً أولاً —"
+            />
           </div>
         </div>
 
         {/* Row 2: Pricing */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {itemVariants.length > 0 && (
+          <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-b from-amber-50/80 to-white p-4 space-y-3 shadow-sm">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-neutral-900">تسعير كل متغير</p><p className="text-[11px] text-neutral-500">حدد السعر الترويجي لكل خيار بشكل مستقل. السعر الأصلي للمنتج لن يتغير.</p></div><span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-[10px] font-black text-amber-700">{itemVariants.length} خيارات</span></div>
+            <div className="hidden sm:grid grid-cols-[1fr_95px_120px_70px] gap-2 px-2 text-[10px] font-black text-neutral-400"><span>الخيار</span><span>الأصلي</span><span>سعر العرض</span><span>الخصم</span></div>
+            {itemVariants.map((variant, index) => {
+              const id = variant.id || `legacy-${index}`;
+              const offerPrice = Number(form.variantPrices[id]);
+              const discount = Number(variant.price) > 0 && Number.isFinite(offerPrice) ? Math.round(((Number(variant.price) - offerPrice) / Number(variant.price)) * 100) : 0;
+              return <div key={id} className="grid grid-cols-[1fr_auto_110px_auto] items-center gap-2 rounded-xl border border-amber-500/10 bg-white/80 p-2 text-xs">
+                <span className="font-bold text-neutral-800 truncate">{variant.name || `الخيار ${index + 1}`}</span><span className="text-neutral-400 line-through whitespace-nowrap">{Number(variant.price).toFixed(2)} ₪</span><input type="number" min="0" max={variant.price} step="0.01" className={`${inputClass(!!errors.finalPrice)} !rounded-xl !py-2`} value={form.variantPrices[id] || ''} placeholder="سعر العرض" onChange={e => setForm(f => ({ ...f, variantPrices: { ...f.variantPrices, [id]: e.target.value } }))} aria-label={`سعر العرض لـ ${variant.name}`} /><span className={`text-[10px] font-black whitespace-nowrap ${discount > 0 ? 'text-emerald-600' : 'text-neutral-400'}`}>{discount > 0 ? `-${discount}%` : '—'}</span>
+              </div>;
+            })}
+            {errors.finalPrice && <p className="text-red-500 text-xs">{errors.finalPrice}</p>}
+          </div>
+        )}
+        {itemVariants.length === 0 && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={labelClass}>السعر الأصلي (₪)</label>
             <input
@@ -353,7 +400,7 @@ function PromotionForm({ items, editingPromotion, onSave, onCancel, saving }: Pr
             />
             {errors.discountValue && <p className="text-red-500 text-xs mt-1 px-1">{errors.discountValue}</p>}
           </div>
-        </div>
+        </div>}
 
         {/* Final Price */}
         {form.finalPrice && (
@@ -594,6 +641,7 @@ function PromotionRow({
         <div className="flex items-center gap-2 flex-wrap">
           <h4 className="font-black text-neutral-900 text-sm">{promotion.title}</h4>
           <StatusBadge status={status} />
+          {promotion.needsReview && <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[10px] font-black text-amber-700">يحتاج مراجعة</span>}
         </div>
         <p className="text-xs text-neutral-500 mt-0.5 truncate">{itemName}</p>
         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -654,6 +702,7 @@ export default function AdminPromotions() {
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PromotionStatus>('all');
@@ -718,7 +767,13 @@ export default function AdminPromotions() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا العرض؟')) return;
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     setDeleting(id);
     try {
       await PromotionService.delete(id);
@@ -766,7 +821,7 @@ export default function AdminPromotions() {
             className="flex items-center gap-2 h-11 px-5 rounded-2xl bg-amber-500 text-snouno-dark font-black text-sm shadow-sm hover:bg-amber-600 transition-all"
           >
             <FiPlus size={18} />
-            <span>+ إضافة عرض</span>
+            <span>إضافة ترويجاً جديداً</span>
           </button>
         </div>
 
@@ -785,16 +840,29 @@ export default function AdminPromotions() {
           ))}
         </div>
 
-        {/* Form */}
+        {/* Promotion form modal */}
         <AnimatePresence>
           {showForm && (
-            <PromotionForm
-              items={items}
-              editingPromotion={editingPromotion}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              saving={saving}
-            />
+            <motion.div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            >
+              <div className="absolute inset-0 bg-neutral-950/45 backdrop-blur-sm" onClick={handleCancel} />
+              <motion.div
+                initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 18, scale: 0.98 }}
+                className="relative z-10 w-full max-w-2xl max-h-[min(90vh,760px)] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-neutral-100"
+              >
+                <PromotionForm
+                  items={items}
+                  editingPromotion={editingPromotion}
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  saving={saving}
+                />
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -876,6 +944,35 @@ export default function AdminPromotions() {
       {/* Toast */}
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} />}
+      </AnimatePresence>
+
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <motion.div
+            className="fixed inset-0 z-[160] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <button type="button" className="absolute inset-0 bg-neutral-950/50 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} aria-label="إغلاق" />
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              className="relative w-full max-w-sm rounded-3xl border border-red-100 bg-white p-6 text-center shadow-2xl"
+              dir="rtl"
+            >
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+                <FiTrash2 size={24} />
+              </div>
+              <h3 className="text-lg font-black text-neutral-900">حذف العرض؟</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-500">هل أنت متأكد من حذف هذا العرض؟ لن يتأثر الصنف الأصلي أو متغيراته.</p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => setConfirmDeleteId(null)} className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm font-black text-neutral-600 hover:bg-neutral-100">إلغاء</button>
+                <button type="button" onClick={confirmDelete} disabled={!!deleting} className="rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-red-600/20 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60">{deleting ? 'جاري الحذف...' : 'حذف العرض'}</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Warning for expired active promotions */}

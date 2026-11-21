@@ -37,9 +37,9 @@ const CustomSelect: React.FC<Props> = ({ options, value, onChange, error, placeh
                 disabled={disabled}
                 className={`
                     w-full flex items-center justify-between px-6 py-4 rounded-2xl border transition-all duration-500
-                    bg-gray-50 outline-none shadow-soft
-                    ${disabled ? "opacity-50 cursor-not-allowed border-gray-100" : "hover:border-primary/30 hover:bg-white"}
-                    ${error ? "border-secondary ring-4 ring-secondary/5" : (!disabled ? "border-gray-100 focus:border-primary focus:ring-4 focus:ring-primary/5 focus:bg-white" : "")} 
+                    bg-white outline-none shadow-sm
+                    ${disabled ? "opacity-50 cursor-not-allowed border-gray-200" : "hover:border-amber-400 hover:bg-amber-50/20"}
+                    ${error ? "border-red-400 ring-4 ring-red-500/5" : (!disabled ? "border-gray-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:bg-white" : "")} 
                 `}
             >
                 <span className={`text-sm font-bold ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>

@@ -36,6 +36,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
                     <p className="font-black text-gray-900 truncate text-sm leading-tight">
                         {itemName}
                     </p>
+                    {item.optionLabel && <p className="text-[11px] font-bold text-primary truncate">{item.optionLabel}</p>}
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs font-bold text-gray-400">{item.selectedPrice}</span>
                         <TbCurrencyShekel size={11} className="text-gray-400" />

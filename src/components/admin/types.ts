@@ -49,6 +49,8 @@ export interface Item {
   nameAr: string;
   price: string;
   priceTw?: string;
+  priceLabelsAr?: string;
+  variants?: Array<{ id?: string; name: string; price: number; priceTw?: number }>;
   ingredients?: string;
   ingredientsAr?: string;
   categoryId: string;

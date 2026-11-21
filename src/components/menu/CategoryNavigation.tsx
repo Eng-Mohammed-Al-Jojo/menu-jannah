@@ -23,9 +23,9 @@ export default function CategoryNavigation({ categories, activeId, onSelect }: P
   }, [activeId]);
 
   return (
-    <div className="sticky top-0 z-40 -mx-3 px-3 py-3 bg-[var(--bg-main)] sm:mx-0 sm:px-0">
+    <div className="sticky top-0 z-40 py-2">
       <div className="overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-2 min-w-max px-1">
+        <div className="flex items-center gap-1.5 min-w-max">
           {/* "الكل" pill */}
           <Pill
             id="all"
@@ -69,8 +69,8 @@ function Pill({ label, isActive, onClick, isAll, refProp }: PillProps) {
       aria-pressed={isActive}
       className={`relative flex items-center gap-2 whitespace-nowrap font-bold text-sm sm:text-base px-5 py-2.5 rounded-full transition-all duration-200 outline-none select-none cursor-pointer ${
         isActive
-          ? "text-white shadow-[0_4px_16px_rgba(18,19,22,0.20)]"
-          : "text-neutral-600 bg-white/80 border border-amber-500/12 hover:border-amber-500/35 hover:text-amber-700 shadow-sm"
+          ? "text-white"
+          : "text-neutral-700 bg-white/70 border border-amber-500/15 shadow-[0_2px_8px_rgba(18,19,22,0.05)] hover:bg-white hover:border-amber-500/30 hover:text-amber-700"
       }`}
     >
       {/* Active background slider */}

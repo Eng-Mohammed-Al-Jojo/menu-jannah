@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiClock, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiClock, FiChevronLeft, FiChevronRight, FiX, FiInfo } from 'react-icons/fi';
 import { PromotionService } from '../../services/promotionService';
 import {
   type Promotion,
@@ -34,21 +34,32 @@ function CountdownBadge({ days }: { days: number }) {
 /* ═══════════════════════════════════════
    PROMOTION CARD
    ═══════════════════════════════════════ */
-function PromotionCard({ promotion, item }: { promotion: Promotion; item: any }) {
+function PromotionCard({ promotion, item, onClick }: { promotion: Promotion; item: any; onClick: () => void }) {
   const daysLeft = getDaysRemaining(promotion);
   const discountPct = getDiscountPercentage(promotion.originalPrice, promotion.finalPrice);
   const imageUrl = promotion.image || (item?.image ? (item.image.startsWith('/') ? item.image : `/images/${item.image}`) : null);
+  const variantPrices = item?.variants?.map((variant: any, index: number) => Number(promotion.variantPrices?.[variant.id || `legacy-${index}`])).filter((price: number) => Number.isFinite(price) && price >= 0) || [];
+  const variantDiscounts = item?.variants?.map((variant: any, index: number) => {
+    const offer = Number(promotion.variantPrices?.[variant.id || `legacy-${index}`]);
+    const original = Number(variant.price);
+    return Number.isFinite(offer) && original > 0 ? Math.round(((original - offer) / original) * 100) : null;
+  }).filter((value: number | null): value is number => value !== null) || [];
+  const discountLabel = variantDiscounts.length > 0
+    ? (Math.min(...variantDiscounts) === Math.max(...variantDiscounts) ? `-${variantDiscounts[0]}%` : `-${Math.min(...variantDiscounts)}–${Math.max(...variantDiscounts)}%`)
+    : `-${discountPct}%`;
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onClick}
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -3, transition: { duration: 0.2 } }}
-      className="relative flex flex-col bg-white rounded-2xl overflow-hidden border border-amber-500/15 shadow-sm hover:shadow-md transition-shadow shrink-0 w-52 sm:w-60"
+      className="relative flex flex-col text-right bg-white rounded-2xl overflow-hidden border border-amber-500/15 shadow-sm hover:shadow-md transition-shadow shrink-0 w-52 sm:w-60 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
     >
       {/* Discount Badge */}
       <div className="absolute top-2.5 right-2.5 z-10 bg-amber-500 text-snouno-dark text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">
-        -{discountPct}%
+        {discountLabel}
       </div>
 
       {/* Image */}
@@ -84,17 +95,51 @@ function PromotionCard({ promotion, item }: { promotion: Promotion; item: any })
         {/* Pricing */}
         <div className="flex items-baseline gap-2 mt-auto pt-1">
           <span className="text-xl font-black text-amber-600">
-            {promotion.finalPrice.toFixed(2)} ₪
+            {variantPrices.length > 0 ? `من ${Math.min(...variantPrices).toFixed(2)} ₪` : `${promotion.finalPrice.toFixed(2)} ₪`}
           </span>
-          <span className="text-xs text-neutral-400 line-through font-medium">
-            {promotion.originalPrice.toFixed(2)} ₪
-          </span>
+          {variantPrices.length === 0 && (
+            <span className="text-xs text-neutral-400 line-through font-medium">
+              {promotion.originalPrice.toFixed(2)} ₪
+            </span>
+          )}
         </div>
+
+        <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600"><FiInfo size={11} /> اضغط لمعرفة التفاصيل</span>
 
         {/* Countdown */}
         {daysLeft !== null && <CountdownBadge days={daysLeft} />}
       </div>
-    </motion.div>
+    </motion.button>
+  );
+}
+
+function PromotionDetails({ promotion, item, onClose }: { promotion: Promotion; item: any; onClose: () => void }) {
+  const variants = Array.isArray(item?.variants) ? item.variants : [];
+  const imageUrl = promotion.image || (item?.image ? (item.image.startsWith('/') ? item.image : `/images/${item.image}`) : '/jannah-logo.jpg');
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="تفاصيل العرض">
+      <button type="button" className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} aria-label="إغلاق" />
+      <motion.div initial={{ opacity: 0, y: 18, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-amber-500/20" dir="rtl">
+        <button type="button" onClick={onClose} className="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/65" aria-label="إغلاق"><FiX size={18} /></button>
+        <img src={imageUrl} alt={item?.nameAr || promotion.title} className="h-48 w-full object-cover" onError={e => { e.currentTarget.src = '/jannah-logo.jpg'; }} />
+        <div className="space-y-4 p-5">
+          <div><h3 className="text-xl font-black text-neutral-900">{promotion.title || item?.nameAr}</h3><p className="mt-1 text-sm font-bold text-neutral-500">{item?.nameAr}</p>{promotion.description && <p className="mt-2 text-xs leading-relaxed text-neutral-500">{promotion.description}</p>}</div>
+          {variants.length > 0 && promotion.variantPrices ? (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-50/50 p-3">
+              <p className="mb-2 text-xs font-black text-amber-700">أسعار العرض حسب الخيار</p>
+              <div className="space-y-2">{variants.map((variant: any, index: number) => {
+                const original = Number(variant.price);
+                const offer = Number(promotion.variantPrices?.[variant.id || `legacy-${index}`]);
+                if (!Number.isFinite(offer)) return null;
+                const pct = original > 0 ? Math.round(((original - offer) / original) * 100) : 0;
+                return <div key={variant.id || index} className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2.5 text-xs"><span className="min-w-0 truncate font-bold text-neutral-800">{variant.name}</span><span className="flex shrink-0 items-center gap-2" dir="ltr"><span className="text-neutral-400 line-through">{original.toFixed(2)} ₪</span><span className="font-black text-emerald-600">{offer.toFixed(2)} ₪</span>{pct > 0 && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-black text-amber-700">-{pct}%</span>}</span></div>;
+              })}</div>
+            </div>
+          ) : <div className="flex items-center justify-between rounded-2xl border border-amber-500/20 bg-amber-50/50 px-4 py-3"><span className="text-sm font-bold text-neutral-500">السعر</span><span className="flex items-center gap-2" dir="ltr"><span className="text-xs text-neutral-400 line-through">{promotion.originalPrice.toFixed(2)} ₪</span><span className="text-xl font-black text-emerald-600">{promotion.finalPrice.toFixed(2)} ₪</span></span></div>}
+          <button type="button" onClick={onClose} className="w-full rounded-2xl bg-snouno-dark py-3 text-sm font-black text-amber-300">إغلاق التفاصيل</button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -110,6 +155,8 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [items, setItems] = useState<Record<string, any>>({});
   const [scrollIdx, setScrollIdx] = useState(0);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  const [promotionsError, setPromotionsError] = useState(false);
 
   // Firebase listeners
   useEffect(() => {
@@ -126,6 +173,11 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
 
     const unsubPromotions = PromotionService.subscribe((nextPromotions) => {
       setPromotions(nextPromotions);
+      setPromotionsError(false);
+      promotionsLoaded = true;
+      notifyReady();
+    }, () => {
+      setPromotionsError(true);
       promotionsLoaded = true;
       notifyReady();
     });
@@ -160,7 +212,7 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
     return () => window.clearInterval(timer);
   }, [activePromotions.length]);
 
-  if (activePromotions.length === 0) return null;
+  if (promotionsError || activePromotions.length === 0) return null;
 
   const VISIBLE = 3;
   const canScrollLeft = scrollIdx > 0;
@@ -217,6 +269,7 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
               key={p.id}
               promotion={p}
               item={items[p.itemId]}
+              onClick={() => setSelectedPromotion(p)}
             />
           ))}
         </div>
@@ -229,6 +282,7 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
                 key={p.id}
                 promotion={p}
                 item={items[p.itemId]}
+                onClick={() => setSelectedPromotion(p)}
               />
             ))}
           </AnimatePresence>
@@ -248,6 +302,7 @@ export default function PromotionsSection({ onVisibilityChange, onReady }: Promo
           ))}
         </div>
       )}
+      {selectedPromotion && <PromotionDetails promotion={selectedPromotion} item={items[selectedPromotion.itemId]} onClose={() => setSelectedPromotion(null)} />}
     </motion.section>
   );
 }

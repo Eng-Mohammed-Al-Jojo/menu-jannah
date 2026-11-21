@@ -128,10 +128,20 @@ const SortableItem: React.FC<{
             )}
           </div>
 
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-sm font-black text-primary">{item.price}</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">₪</span>
-          </div>
+          {item.variants && item.variants.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {item.variants.map((variant, index) => (
+                <span key={variant.id || index} className="inline-flex items-center gap-1 rounded-md bg-primary/5 border border-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                  <span>{variant.name}</span><span>{Number(variant.price).toFixed(2)} ₪</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-sm font-black text-primary">{Number(String(item.price).replace(',', '.')).toFixed(2)}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">₪</span>
+            </div>
+          )}
 
         </div>
       </div>
@@ -218,6 +228,8 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
   const [itemNameAr, setItemNameAr] = useState("");
   const [itemIngredientsAr, setItemIngredientsAr] = useState("");
   const [itemPrice, setItemPrice] = useState("");
+  const [pricingMode, setPricingMode] = useState<"single" | "variants">("single");
+  const [variants, setVariants] = useState<Array<{ id: string; name: string; price: string }>>([{ id: `${Date.now()}`, name: "", price: "" }]);
   const [quickSearch, setQuickSearch] = useState("");
 
   const [selectedCategoryError, setSelectedCategoryError] = useState(false);
@@ -240,18 +252,30 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
     if (!selectedCategory) { setSelectedCategoryError(true); hasError = true; }
     if (!itemNameAr.trim()) { setItemNameError(true); hasError = true; }
 
-    const priceArray = itemPrice.split(",").map(p => p.trim());
-    if (!itemPrice.trim() || priceArray.some(p => isNaN(Number(p)) || Number(p) <= 0)) {
+    const validVariants = variants.filter((variant) => variant.name.trim() && Number(variant.price) > 0);
+    const priceArray = pricingMode === "variants" ? validVariants.map((variant) => variant.price.trim()) : [itemPrice.trim()];
+    if (!priceArray.length || priceArray.some(p => isNaN(Number(p)) || Number(p) <= 0)) {
       setItemPriceError(true);
       hasError = true;
     }
 
     if (hasError) return;
 
+    const savedVariants = pricingMode === "variants" ? validVariants.map((variant) => ({
+      id: variant.id,
+      name: variant.name.trim(),
+      price: Number(variant.price),
+    })) : priceArray.map((price, index) => ({
+      id: `${Date.now()}-${index}`,
+      name: `الخيار ${index + 1}`,
+      price: Number(price),
+    }));
+
     await push(ref(db, "items"), {
       nameAr: itemNameAr,
       ingredientsAr: normalizeIngredients(itemIngredientsAr),
-      price: itemPrice,
+      price: pricingMode === "single" ? itemPrice.trim() : String(Math.min(...priceArray.map(Number))),
+      ...(pricingMode === "variants" ? { variants: savedVariants } : {}),
       categoryId: selectedCategory,
       subcategoryId: selectedSubcategory || null,
       visible: true,
@@ -263,6 +287,8 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
     setItemNameAr("");
     setItemIngredientsAr("");
     setItemPrice("");
+    setPricingMode("single");
+    setVariants([{ id: `${Date.now()}`, name: "", price: "" }]);
     setSelectedCategory("");
     setSelectedSubcategory("");
     setItemImage("");
@@ -395,17 +421,17 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
           >
             <motion.div
               initial={{ opacity: 0, y: 18, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 18, scale: .98 }}
-              className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-xl bg-[var(--bg-surface)] p-3 sm:p-4 shadow-2xl"
+              className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-neutral-50 shadow-2xl ring-1 ring-black/5"
             >
-              <button type="button" onClick={() => setShowAddModal(false)} className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-sm text-neutral-500 hover:bg-neutral-200" aria-label="إغلاق">×</button>
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-sm text-amber-700"><FiPlus /></div>
-                <div><h2 className="text-base font-black text-neutral-900">{t('admin.add_new_item')}</h2><p className="text-[11px] text-neutral-400">أدخل بيانات الصنف ثم احفظه</p></div>
+              <div className="relative flex items-center gap-3 bg-[var(--brand-obsidian)] px-5 py-4 sm:px-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400 text-[var(--brand-obsidian)] shadow-sm"><FiPlus size={19} /></div>
+                <div><h2 className="text-lg font-black text-white">{t('admin.add_new_item')}</h2><p className="mt-0.5 text-[11px] font-medium text-white/60">أدخل بيانات الصنف ثم احفظه</p></div>
+                <button type="button" onClick={() => setShowAddModal(false)} className="mr-auto flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-lg text-white/70 hover:bg-white/20 hover:text-white" aria-label="إغلاق">×</button>
               </div>
 
-              <div className="bg-transparent relative overflow-hidden group">
+              <div className="relative overflow-hidden bg-neutral-50 p-4 sm:p-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-gray-500 px-1">{t('admin.categories')}</label>
                     <CustomSelect
@@ -416,6 +442,28 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
                       placeholder={t('admin.select_category')}
                     />
                   </div>
+
+                  <div className="order-10 md:col-span-2 flex items-center justify-between rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                    <div><p className="text-xs font-black text-neutral-800">طريقة تسعير الصنف</p><p className="text-[10px] text-neutral-400">اختر سعرًا واحدًا أو متغيرات متعددة</p></div>
+                    <div className="flex gap-1 rounded-xl bg-white p-1 border border-neutral-200">
+                      <button type="button" onClick={() => setPricingMode("single")} className={`rounded-lg px-3 py-1.5 text-[11px] font-bold ${pricingMode === "single" ? "bg-snouno-dark text-amber-300" : "text-neutral-500"}`}>سعر واحد</button>
+                      <button type="button" onClick={() => setPricingMode("variants")} className={`rounded-lg px-3 py-1.5 text-[11px] font-bold ${pricingMode === "variants" ? "bg-snouno-dark text-amber-300" : "text-neutral-500"}`}>متغيرات</button>
+                    </div>
+                  </div>
+
+                  {pricingMode === "variants" && <div className="order-20 md:col-span-2 rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 space-y-2 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-neutral-700">متغيرات الصنف</label>
+                      <button type="button" onClick={() => setVariants((prev) => [...prev, { id: `${Date.now()}`, name: "", price: "" }])} className="rounded-lg bg-amber-500 px-2.5 py-1.5 text-[11px] font-black text-snouno-dark">+ إضافة متغير</button>
+                    </div>
+                    {variants.map((variant, index) => (
+                      <div key={variant.id} className="flex gap-2">
+                        <input className="min-w-0 flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10" placeholder="مثال: قطعة أو نصف كيلو" value={variant.name} onChange={(e) => setVariants((prev) => prev.map((v, i) => i === index ? { ...v, name: e.target.value } : v))} />
+                        <input className="w-24 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10" type="number" min="0" step="0.01" placeholder="السعر ₪" value={variant.price} onChange={(e) => setVariants((prev) => prev.map((v, i) => i === index ? { ...v, price: e.target.value } : v))} />
+                        {variants.length > 1 && <button type="button" onClick={() => setVariants((prev) => prev.filter((_, i) => i !== index))} className="rounded-xl px-2 text-red-500 hover:bg-red-50">×</button>}
+                      </div>
+                    ))}
+                  </div>}
 
                   <div className={`flex flex-col gap-1.5 transition-all duration-500 ${currentCatSubcategories.length > 0 ? "opacity-100 translate-y-0" : "opacity-30 pointer-events-none translate-y-2"}`}>
                     <label className="text-xs font-bold text-gray-500 px-1">{t('admin.subcategories')}</label>
@@ -433,9 +481,9 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
                       {t('common.name')}
                     </label>
                     <input
-                      className={`w-full h-10 bg-gray-50 border px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all
-                ${itemNameError ? "border-secondary" : "border-gray-100"} text-right`}
-                      placeholder={t('admin.item_name_ar_placeholder')}
+                      className={`w-full h-10 bg-white border px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all
+                ${itemNameError ? "border-red-400" : "border-gray-300"} text-right`}
+                      placeholder="مثال: كنافة نابلسية أو معمول بالتمر"
                       value={itemNameAr}
                       onChange={(e) => {
                         setItemNameAr(e.target.value);
@@ -449,25 +497,28 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
                       {t('admin.ingredients_label')}
                     </label>
                     <input
-                      className="w-full h-10 bg-gray-50 border border-gray-100 px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-right"
-                      placeholder={t('admin.ingredients_placeholder')}
+                      className="w-full h-10 bg-white border border-gray-300 px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-right"
+                      placeholder="مثال: فستق، جوز، قشطة، قطر أو سمسم"
                       value={itemIngredientsAr}
                       onChange={(e) => setItemIngredientsAr(e.target.value)}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-500 px-1">{t('common.total')}</label>
+                  {pricingMode === "single" && <div className="order-20 flex flex-col gap-1.5 rounded-2xl border-2 border-amber-300 bg-gradient-to-l from-amber-50 to-white p-3 shadow-md shadow-amber-900/5 ring-1 ring-amber-200/60">
+                    <label className="text-xs font-bold text-gray-500 px-1">السعر</label>
                     <input
-                      className={`w-full h-10 bg-gray-50 border px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all
-                ${itemPriceError ? "border-secondary" : "border-gray-100"}`}
-                      placeholder={t('admin.item_price_placeholder')}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={`w-full h-10 bg-white border px-3 rounded-xl text-xs sm:text-sm outline-none focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all
+                ${itemPriceError ? "border-red-400" : "border-gray-300"}`}
+                      placeholder="مثال: 12.00 للسعر بالشيكل"
                       value={itemPrice}
                       onChange={(e) => { setItemPrice(e.target.value); setItemPriceError(false); }}
                     />
-                  </div>
+                  </div>}
 
-                  <div className="flex flex-col gap-1.5 md:col-span-2">
+                  <div className="order-20 flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-xs font-black text-neutral-500 uppercase tracking-widest px-1">
                       صورة المنتج
                     </label>
@@ -513,7 +564,7 @@ const ItemSection: React.FC<Props> = ({ categories, subcategories, items, setPop
                     </div>
                   </div>
 
-                  <div className="flex items-end md:col-span-2">
+                  <div className="order-30 flex items-end md:col-span-2">
                     <button
                       onClick={addItem}
                       className="w-full h-11 bg-[var(--brand-obsidian)] text-amber-300 font-black rounded-xl shadow-md hover:bg-[var(--brand-obsidian-light)] active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
